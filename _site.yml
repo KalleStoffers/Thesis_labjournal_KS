@@ -1,0 +1,18 @@
+name: "Example repo"
+#exclude: ["data"]
+navbar:
+  left:
+    - icon: fa-home
+      href: index.html
+
+    - icon: fab fa-github
+      href: https://github.com/JochemTolsma/BIGSSS_segregation_polarization
+output:
+  html_document:
+    theme: flatly
+    highlight: default
+
+output_dir: "docs"
+
+
+
