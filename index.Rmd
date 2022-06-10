@@ -40,7 +40,7 @@ klippy::klippy(position = c('top', 'right'))
 :::::::::::::: {.columns}
 ::: {.column width="50%"}
 
-# **Example repo**
+# **Your own lab journal**
 ### BIGSSS-CSS: Segregation-Polarisation
 Last compiled on `r format(Sys.time(), '%B, %Y')`
 
