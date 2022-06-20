@@ -8,7 +8,7 @@ The zipped folder contains all of the files you need. All you need for it to wor
 
 1. Make sure R and R-studio are installed;
 2. Make sure the 'rmarkdown'-package is installed in R-studio (with "install dependencies");
-3. Navigate to the downloaded folder and open the 'bigssslabjournal.Proj' file.
+3. Navigate to the downloaded folder and open the 'bigssslabjournal.Rproj' file.
 4. To compile your lab journal / website, click the 'build' button in the top right hand corner. 
 
 ## Host your lab journal on GitHub
