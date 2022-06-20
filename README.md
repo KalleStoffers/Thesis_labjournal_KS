@@ -1,5 +1,5 @@
 # BIGSSS-CSS Lab Journal
-An example repository/lab journal for students of the BIGSSS-CSS summer school about segregation & polarisation.
+An example repository/lab journal for students of the BIGSSS-CSS summer school about segregation & polarisation (https://robfranken.github.io/bigssslabjournal/).
 To use this, click the download as .zip button to start from your laptop; or skip down to fork this repository and get started that way.
 The zipped folder contains all of the files you need. All you need for it to work is (the latest version of) R and R-studio installed. 
 
