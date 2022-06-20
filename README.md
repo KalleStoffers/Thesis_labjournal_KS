@@ -24,7 +24,7 @@ In this repository, the webpage is built from the 'docs'-folder.
 
 1. Download [GitHub Desktop](https://desktop.github.com); 
 2. Connect it to your GitHub account;
-3. Clone the repository to your laptop;
+3. Clone the repository to your laptop using GitHub Desktop;
 4. Open the .Rproj file on your laptop;
 5. Edit the .Rmd files as you wish, using R-studio;
 6. Recompile the lab journal website (using the build function);
