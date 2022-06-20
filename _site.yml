@@ -4,6 +4,23 @@ navbar:
   left:
     - icon: fa-home
       href: index.html
+    - text: "Segregation"
+      menu:
+      - text: "Assignment 1"
+        href: "seg1.html"
+      - text: "Assignment 2"
+        href: "seg2.html"
+      - text: "Assignment 3"
+        href: "seg3.html"
+        
+    - text: "Polarisation"
+      menu:
+      - text: "Assignment 1"
+        href: "pol1.html"
+      - text: "Assignment 2"
+        href: "pol2.html"
+      - text: "Assignment 3"
+        href: "pol3.html"
 
     - icon: fab fa-github
       href: https://github.com/JochemTolsma/BIGSSS_segregation_polarization
@@ -13,6 +30,5 @@ output:
     highlight: default
 
 output_dir: "docs"
-
 
 
