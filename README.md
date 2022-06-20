@@ -11,16 +11,16 @@ The zipped folder contains all of the files you need. All you need for it to wor
 3. Navigate to downloads, unzip the downloaded folder, and open the 'bigssslabjournal.Rproj' file.
 4. To compile your lab journal / website, click the 'build' button in the top right hand corner. 
 
-## Host your lab journal on GitHub
+## Host your lab journal on GitHub:
 This repository has the capacbility of serving html-files contained in the repository (aka github pages).
 In this repository, the webpage is built from the 'docs'-folder.
 
-**Steps**
+**Steps:**
 
 1. Fork the repository to your GitHub (now, you have a copy of this repository in your GitHub-account);
 2. Click settings > GitHub Pages; serve from 'docs'-folder;
 
-**Editing the lab journal and hosting on GitHub**
+**Editing the lab journal and hosting on GitHub:**
 
 1. Download [GitHub Desktop](https://desktop.github.com); 
 2. Connect it to your GitHub account;
