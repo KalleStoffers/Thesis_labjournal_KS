@@ -5,7 +5,7 @@ A lab journal template for students of the BIGSSS-CSS summer school about segreg
 ## Preparation:
 
 1. Make sure R and R-studio are installed;
-2. Make sure the 'rmarkdown'-package is installed in R-studio (with "install dependencies");
+2. Make sure the `rmarkdown`-package is installed in R-studio (with "install dependencies");
 3. Make sure [GitHub Desktop](https://desktop.github.com) is installed and connected to your GitHub account;
 
 ## Cloning the repository:
