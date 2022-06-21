@@ -17,9 +17,12 @@ The local folders contains all of the files you need. All you need for it to wor
 
 ## Journal your work:
 
-1. Navigate to the cloned repository and open the 'bigssslabjournal.Rproj' file. This should automatically open R-studio, and your current working environment will be inside this project.
+1. Navigate to the cloned folder and open the 'bigssslabjournal.Rproj' file. This should automatically open R-studio, and your current working environment will be inside this project.
 2. Inside R-studio you should see a files tab in the bottom right hand corner; 
-3. Edit the .Rmd files as you wish within R-studio.
+3. Customize the 'index.Rmd' as you wish within R-studio, to make it your own;
+4. Journal your work by editing the 'journal.Rmd'-files.
+
+You can keep your notes/working scripts in the /test-folder.
 
 ## Hosting on Github:
 
@@ -28,3 +31,4 @@ In this repository, the webpage is built from the 'docs'-folder.
 
 1. Recompile the lab journal website using the build function in the top right hand corner;
 2. Push your changes to GitHub using GitHub Desktop.
+3. Profit!
