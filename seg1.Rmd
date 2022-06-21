@@ -5,7 +5,7 @@ author: "Rob Franken"
 output: 
   html_document:
     css: tweaks.css
-    toc:  false
+    toc:  true
     toc_float: true
     number_sections: false
  
@@ -48,7 +48,13 @@ Output: ...
 
 ----
 
+## Custom functions
 
+
+## Data
+
+
+## ...
 
 
 
