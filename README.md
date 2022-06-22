@@ -31,4 +31,3 @@ In this repository, the webpage is built from the 'docs'-folder.
 
 1. Recompile the lab journal website using the build function in the top right hand corner;
 2. Push your changes to GitHub using GitHub Desktop.
-3. Profit!
