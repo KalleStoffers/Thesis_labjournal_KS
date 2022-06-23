@@ -1,5 +1,5 @@
 # BIGSSS-CSS Lab Journal
-A lab journal template for students of the BIGSSS-CSS summer school about segregation & polarisation (https://robfranken.github.io/bigssslabjournal/).
+A lab journal template for students of the BIGSSS-CSS summer school about segregation & polarisation (https://robfranken.github.io/bigssslabjournal/). To use this, follow the steps below.
 
 
 ## Preparation:
