@@ -8,7 +8,7 @@ A lab journal template for students of the BIGSSS-CSS summer school about segreg
 2. Make sure the `rmarkdown`-package is installed in R-studio (with "install dependencies");
 3. Make sure [GitHub Desktop](https://desktop.github.com) is installed and connected to your GitHub account;
 
-## Cloning the repository:
+## Forking the repository:
 
 1. Click the green 'Code'-button in the top right corner, and copy the web URL;
 2. Clone the repository to your laptop using GitHub Desktop.
