@@ -15,7 +15,7 @@ A lab journal template for students of the BIGSSS-CSS summer school about segreg
 
 You now have a personal copy of this repository on your account, which serves html files (aka Github pages) as a website.
 
-## Clone the repository
+## Clone the repository:
 1. Using GitHub desktop, clone the lab journal repository to your personal laptop;
 2. Specify that you want to use the forked repository for your personal use. 
 
