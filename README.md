@@ -22,13 +22,14 @@ You now have a personal copy of this repository on your account, which serves ht
 The forked repository at your local path contains all of the files you need. All you need for it to work is (the latest version of) R and R-studio installed.
 
 ## Journal your work:
-1. Navigate to the repository at your local path and open the 'bigssslabjournal.Rproj' file. This should automatically open R-studio, and your current working environment will be inside this project.
+1. Right-click on the repository name and click 'Open in Rstudio'; alternately, you can navigate to the repository at your local path and open the 'bigssslabjournal.Rproj' file. This should automatically open R-studio, and your current working environment will be inside this project.
 2. Inside R-studio you should see a files tab in the bottom right hand corner; 
 3. Customize the 'index.Rmd' as you wish within R-studio, to make it your own;
-4. Journal your work by editing the 'journal.Rmd'-files.
+4. Journal your work using .Rmd-files.
 
 You can keep your personal notes and working scripts in the '_test'-folder. Scripts contained in this folder will not be compiled.
 
 ## Hosting on Github:
 1. Recompile the lab journal website using the build function in the top right hand corner;
 2. Push your changes to GitHub using GitHub Desktop.
+3. Your personal lab journal website will be published at: https://{USERNAME}.github.io/bigssslabjournal/
