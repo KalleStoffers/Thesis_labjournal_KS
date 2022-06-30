@@ -1,5 +1,5 @@
 name: "Example repo"
-#exclude: ["data"]
+exclude: ["data"]
 navbar:
   left:
     - icon: fa-home
