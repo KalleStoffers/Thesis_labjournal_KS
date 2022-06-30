@@ -1,17 +1,15 @@
 ---
 title: "Lab journal"
 author: "by: Rob Franken"
-#bibliography: references.bib
-output: 
-  html_document:
-    css: tweaks.css
-    toc:  false
-    toc_float: true
-    number_sections: false
+
+
  
 ---
 
-
+```{r, install remotely, globalsettings, echo=FALSE, warning=FALSE, results='hide'}
+# install.packages("remotes")
+#remotes::install_github("rlesur/klippy")
+``` 
 
 ```{r, globalsettings, echo=FALSE, warning=FALSE, results='hide'}
 library(knitr)
@@ -77,8 +75,7 @@ Participants of the BIGSSS Summer School can fork this repository. Using this, t
 
 <br>
 
-Use the top menu to navigate to the assignments.
-
+Use the top menu to navigate through the journal.
 
 
 ----

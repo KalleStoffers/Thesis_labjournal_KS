@@ -1,5 +1,11 @@
 name: "Example repo"
-exclude: ["data"]
+author: 
+  - 'Rob Franken'
+output_dir: "docs"
+exclude: 
+  - "data"
+  - "_test"
+bibliography: references.bib
 navbar:
   left:
     - icon: fa-home
@@ -9,19 +15,19 @@ navbar:
       - text: "Day 1"
         href: lab1.html
         
-        # here, you can add other .Rmd files
-        
-    - text: "Notes"
-      #href: notes.html
+        # here, other .Rmds can be added
 
-  
-    - icon: fab fa-github
-      href: https://github.com/JochemTolsma/BIGSSS_segregation_polarization
+
+  right:
+  - icon: fab fa-github
+    href: https://github.com/robfranken/bigssslabjournal
 output:
   html_document:
     theme: flatly
     highlight: default
-
-output_dir: "docs"
-
-
+    toc:  false
+    toc_float: false
+    number_sections: false
+    #code_folding: show
+    #code_download: no
+    css: tweaks.css
