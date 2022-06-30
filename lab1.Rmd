@@ -1,5 +1,5 @@
 ---
-title: "Segregation: assignment 1"
+title: "Journal 1"
 #bibliography: references.bib
 author: "Rob Franken"
 output: 
@@ -39,22 +39,12 @@ Last compiled on `r format(Sys.time(), '%B, %Y')`
 
 ----
   
-In this assignment, ...
-
-You will need, ...
-
-Output: ...
-
+This is just an example page of your lab journal.
+You can journal the assignments of the first day here.
+  
 
 ----
 
-## Custom functions
-
-
-## Data
-
-
-## ...
 
 
 

@@ -8,8 +8,12 @@ navbar:
       menu:
       - text: "Day 1"
         href: lab1.html
+        
+        # here, you can add other .Rmd files
+        
     - text: "Notes"
-    - text: "Literature"
+      #href: notes.html
+
   
     - icon: fab fa-github
       href: https://github.com/JochemTolsma/BIGSSS_segregation_polarization
