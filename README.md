@@ -4,7 +4,7 @@ A [lab journal](https://jochemtolsma.github.io/labjournal/) template for student
 
 ## Preparation:
 
-1.  Make sure R and R-studio are installed;
+1.  Make sure [R](https://cran.r-project.org/index.html), [R-studio](https://posit.co/downloads/) and [Git](https://git-scm.com/downloads) are installed;
 
 2.  Make sure the `rmarkdown`-package is installed in R-studio (with "install dependencies");\
 
@@ -15,16 +15,18 @@ A [lab journal](https://jochemtolsma.github.io/labjournal/) template for student
 5.  Connect Git, GitHub, RStudio:
 
     ```{r}
-    install.packages("usethis")
-    usethis::create_github_token() #save token in passwordmanager system
+    install.packages("usethis") #so we do not have to use command
+    library("usethis")
+    use_git_config(user.name = "Jane Doe", user.email = "jane@example.org") #use your username and email of your GitHub account
+    create_github_token() #save token in passwordmanager system
     gitcreds::gitcreds_set() #self explanatory I hope
     ```
 
-## Clone the repository:
+## Fork the original labjournal repository:
 
-In RStudio go to '*File', 'New Project', 'Version Control', 'Git'.* I create all my projects as subdirectory of "C:\\Github".
+1.  Fork this repository using the fork button in the top right hand corner of Github, to make a personal copy of this lab journal;
 
-Navigate to your Github account and find your new repository. Under your repository name, navigate to '*Settings*'; click on '*Pages*' on the sidebar; select the main-branch as your publishing source, and serve from the 'docs'-folder:
+2.   Go to your own GitHub account and under your repository name, navigate to 'Settings'; click on 'Pages' on the sidebar; select the main-branch as your publishing source, and serve from the 'docs'-folder:
 
 ![](images/pages.png)
 
@@ -33,6 +35,10 @@ You now have a personal copy of this repository on your account, which serves ht
 ## Inviting collaborators:
 
 Once again, go back to your repository on Github. Navigate to '*Settings*'; click on '*Collaborators*', and invite the lectures of your course (e.g. JochemTolsma). After acceptance, the lecturers have access to you repository and can make contributions. This is not strictly necessary because the lectures can also clone your repository, file issues and make pull requests. But learning how to effectively collaborate via Git is somewhat beyond the scope of this course.
+
+## Clone the repository:
+
+In RStudio go to '*File', 'New Project', 'Version Control', 'Git'.* I create all my projects as subdirectory of "C:\\Github".
 
 ## Journal your work:
 
@@ -46,8 +52,8 @@ You can keep your personal notes and working scripts a separate folder. Make sur
 
 ## Hosting on Github:
 
-1.  Recompile the lab journal website using the Build function in the top right hand corner (if you do not see this 'Build' tap, you may need to restart RStudio);
-2.  Commit your changes and push them to GitHub. For this we will use the 'Git' tap in the top right corner of RStudio. Or we will use the window terminal (Git Bash). Alternatively, if you like you could also use GitHub Desktop. Whatever works best for you.
+1.  Recompile the lab journal website using the Build function in the top right hand corner (if you do not see this '*Build*' tab, you may need to restart RStudio);
+2.  Go the '*Git*' tab, commit your changes and push them to GitHub. Alternatively, you could use Git from the command line (open the '*Terminal'* window) or you could use [GitHub Desktop](https://desktop.github.com/download/). Whatever works best for you.
 3.  Your personal lab journal website will be published at: <https://%7BUSERNAME%7D.github.io/bigssslabjournal/>
 
 ## Useful resources:
