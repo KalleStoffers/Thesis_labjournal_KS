@@ -6,18 +6,22 @@ A [lab journal](https://jochemtolsma.github.io/labjournal/) template for student
 
 1.  Make sure [R](https://cran.r-project.org/index.html), [R-studio](https://posit.co/downloads/) and [Git](https://git-scm.com/downloads) are installed;
 
-2.  Make sure the `rmarkdown`-package is installed in R-studio (with "install dependencies");\
+2.  Make sure the `rmarkdown`-package is installed in R-studio (with "install dependencies");
 
-3.  If you do not have a GitHub account, create one;\
+    ```{r}
+    install.packages("rmarkdown", dependencies = TRUE) 
+    ```
+3.  If you do not have a GitHub account, create one;
 
 4.  Optional: install [GitHub Desktop](https://desktop.github.com).
 
-5.  Connect Git, GitHub, RStudio:
+5.  Connect Git, GitHub, RStudio (we will use the package `usethis` for this):
 
     ```{r}
-    install.packages("usethis") #so we do not have to use command
+    install.packages("usethis") 
     library("usethis")
-    use_git_config(user.name = "Jane Doe", user.email = "jane@example.org") #use your username and email of your GitHub account
+    #use your username and email of your GitHub account
+    use_git_config(user.name = "Your Name", user.email = "yourmail@example.org") 
     create_github_token() #save token in passwordmanager system
     gitcreds::gitcreds_set() #self explanatory I hope
     ```
@@ -26,7 +30,7 @@ A [lab journal](https://jochemtolsma.github.io/labjournal/) template for student
 
 1.  Fork this repository using the fork button in the top right hand corner of Github, to make a personal copy of this lab journal;
 
-2.   Go to your own GitHub account and under your repository name, navigate to 'Settings'; click on 'Pages' on the sidebar; select the main-branch as your publishing source, and serve from the 'docs'-folder:
+2.  Go to your own GitHub account and under your repository name, navigate to 'Settings'; click on 'Pages' on the sidebar; select the main-branch as your publishing source, and serve from the 'docs'-folder:
 
 ![](images/pages.png)
 
