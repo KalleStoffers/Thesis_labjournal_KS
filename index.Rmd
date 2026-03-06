@@ -4,7 +4,9 @@ author: "by: Kalle Stoffers"
 bibliography: references.bib
 ---
 
+# My Lab Journal
+
+Last compiled on `r format(Sys.time(), '%B, %Y')`
 
 
-
-Here I will place updates on the progress of my thesis.
+Here I will post updates on the progress of my thesis.

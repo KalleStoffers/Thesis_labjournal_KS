@@ -8,17 +8,116 @@ Last compiled on `r format(Sys.time(), '%B, %Y')`
 
 <br>
 
-----
-  
-First look at data:
+------------------------------------------------------------------------
 
-```{r}
+## First look at solar panel data
+
+Packages
+
+```{r message = FALSE, warning = FALSE}
+library(tidyverse)
+```
+
+Loading data from all years
+
+```{r echo = TRUE, results = 'hide', message = FALSE, warning = FALSE}
+pv24 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruikgegevens_01_01_2024(1).csv")|> filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2024) |>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv23 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2023.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2023) |>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv22 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2022.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2022) |>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv21 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2021.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2021)|>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv20 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2020.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2020)|>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv19 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2019.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2019)|>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv18 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2018.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2018)|>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv17 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2017.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2017)|>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv16 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2016.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2016)|>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv15 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2015.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2015)|>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv14 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2014.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2014)|>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv13 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2013.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2013)|>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
+
+pv12 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2012.csv") |>
+  filter(PRODUCTSOORT == "ELK") |>
+  mutate(year = 2012)|>
+  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
 
 ```
 
-  
+Merging, sorting and saving data
 
-----
+```{r}
+
+pv <- bind_rows(
+  pv24, pv23, pv22, pv21, pv20, pv19, pv18, pv17, pv16, pv15, pv14, pv13, pv12) |>
+  arrange(STRAATNAAM, year) |>
+  relocate(STRAATNAAM, POSTCODE_VAN, POSTCODE_TOT, year, X.Leveringsrichting)
+
+saveRDS(pv, file = "pv_data.Rds")
+
+```
+
+Solar energy over time
+
+```{r}
+
+class(pv$X.Leveringsrichting)
+pv$X.Leveringsrichting <- as.numeric(pv$X.Leveringsrichting)
+
+pv |>
+  group_by(year) |>
+  summarise(yearly_avg = mean(X.Leveringsrichting, na.rm = TRUE)) |>
+  ggplot(aes(x = year, y = yearly_avg)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_x_continuous(breaks = seq(min(pv$year), max(pv$year), by = 2))+
+  theme_minimal()
 
 
+```
 
+------------------------------------------------------------------------
