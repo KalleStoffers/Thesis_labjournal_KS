@@ -18,7 +18,7 @@ Packages
 library(tidyverse)
 ```
 
-Loading data from all years
+Loading data from all years. De data can be downloaded here: <https://westlandinfra.nl/over-westland-infra/duurzaamheid-innovaties/open-data/>
 
 ```{r echo = TRUE, results = 'hide', message = FALSE, warning = FALSE}
 pv24 <- read.delim("C:/Users/kalle/Downloads/Westland_Infra_kleinverbruikgegevens_01_01_2024(1).csv")|> filter(PRODUCTSOORT == "ELK") |>
@@ -96,7 +96,7 @@ pv <- bind_rows(
   arrange(STRAATNAAM, year) |>
   relocate(STRAATNAAM, POSTCODE_VAN, POSTCODE_TOT, year, X.Leveringsrichting)
 
-saveRDS(pv, file = "pv_data.Rds")
+saveRDS(pv, file = "./data/pv_data.Rds")
 
 ```
 
