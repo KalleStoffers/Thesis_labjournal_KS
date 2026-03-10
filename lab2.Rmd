@@ -13,12 +13,126 @@ Last compiled on `r format(Sys.time(), '%B, %Y')`
 
 ## First look at CBS data
 
+After having assembled the solar panel data, it is time to connect it to the demographic characteristics of the area.
+
 Relevant packages
 
-```{r message=FALSE}
-library (tidyverse)
+```{r eval = FALSE, message=FALSE}
+#install.packages("sf")
+
+rm(list=ls())
+
+#library(fuzzyjoin)
+library (data.table)
+library(tidyverse)
+library(sf)
+#library(tidygeocoder)
 ```
+
+Leeftijd, etnische afkomst, percentage eigendom, WOZ-waarde, elektriciteitsgebruik is op postcodeniveau bekend, dus importeren we de CBS gegevens per PC6 postcode. Die zijn hier te downloaden: <https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode>
+
+```{r eval = FALSE, results = 'hide', message = FALSE, warning = FALSE}
+cbs_pc6_24 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_pc6_2024_v1.gpkg") |>
+  mutate (year = 2024)
+cbs_pc6_23 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_pc6_2023_v2.gpkg") |>
+  mutate (year = 2023)
+cbs_pc6_22 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_pc6_2022_vol.gpkg") |>
+  mutate (year = 2022)
+
+```
+
+Merge CBS data en -9997 en -9995 op NA zetten.
+
+```{r eval=FALSE}
+cbs_pc6 <- bind_rows(cbs_pc6_24, cbs_pc6_23, cbs_pc6_22) |>
+  arrange (postcode6, year) |>
+  relocate (postcode6, year, geom)|>
+  mutate(across(where(is.numeric), ~na_if(., -99997))) |>
+  mutate(across(where(is.numeric), ~na_if(., -99995)))
+```
+
+Een aantal van de straten in de PV data hebben meerdere postcodes:
+
+```{r eval=FALSE}
+pv <- readRDS("./data/pv_data.Rds") |>
+  filter(year >= 2022) |>
+  mutate(id = row_number()) |>
+  relocate(id)
+
+meerdere_postcodes <- pv |> 
+  mutate(same_pc = if_else(POSTCODE_VAN == POSTCODE_TOT, 1, 0)) |>
+  filter(same_pc == 0) |>
+  distinct(STRAATNAAM, POSTCODE_VAN, POSTCODE_TOT, .keep_all = TRUE)
+
+```
+
+Daarom selecteren we eerst de losse cbs postcodes die bij de pv straten horen
+
+```{r eval=FALSE}
+#voor elke rij in pv, selecteer de rij(en) in cbs_pc6 die voldoen aan de voorwaarden cbs_pc6$year=pv$year EN pv$POSTCODE_VAN >= cbs_pc6$postcode6 <= pv$POSTCODE_TOT van die rij in pv. maak voor die rijen in cbs_pc6 een kolom "id" aan en ken de waarde van de desbetrrefende pv$id toe. 
+
+cbs_pc6 |>
+  inner_join(
+    pv, 
+    by = join_by(
+      year == year,
+      postcode6 >= POSTCODE_VAN,
+      postcode6 <= POSTCODE_TOT
+    )
+  )
+
+
+#################################################################
+#setDT(pv)
+#setDT(cbs_pc6)
+
+#resultaat <- cbs_pc6[pv, 
+ #                    on = .(year == year, 
+  #                          postcode6 >= POSTCODE_VAN, 
+ #                           postcode6 <= POSTCODE_TOT), 
+  #                   nomatch = NULL]
+
+
+
+
+```
+
+Dan kunnen we vervolgens de CBS data mergen met de PV data:
 
 ```{r}
 
+#df_merging <- left_join(pv, cbs_pc6, by = c('POSTCODE_VAN'='postcode6', 'year'='year'))
+
 ```
+
+Inkomen en stedelijkheid is alleen beschikbaar per 500m x 500m vierkanten. De data daarvan is hier te downloaden: <https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/kaart-van-500-meter-bij-500-meter-met-statistieken>
+
+```{r eval=FALSE}
+cbs_500_24 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_vk500_2024_v1.gpkg") |>
+  mutate (year = 2024)
+cbs_500_23 <- st_read(dsn = "C:/Users/kalle/Downloads/2025-cbs_vk500_2023_v2/cbs_vk500_2023_v2.gpkg") |>
+  mutate (year = 2023)
+cbs_500_22 <- st_read(dsn = "C:/Users/kalle/Downloads/2025-cbs_vk500_2022_vol/cbs_vk500_2022_vol.gpkg") |>
+  mutate (year = 2022)
+
+cbs_500 <- bind_rows(cbs_500_24, cbs_500_23, cbs_500_22)
+  
+
+```
+
+Nu moeten we de coordinaten van de centroide van elke postcode achterhalen en koppelen aan een 500x500 vierkant.
+
+```{r}
+
+
+
+```
+
+Vervolgens kunnen we dit punt koppelen aan een 500x500 vierkant.
+
+```{r}
+
+
+```
+
+Analyse: social network analyze met een weighted social network waarbij het gewicht de afstand is tussen de centroides van twee straten?
