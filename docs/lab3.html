@@ -11,8 +11,9 @@
 
 <meta name="author" content="Kalle Stoffers" />
 
+<meta name="date" content="2026-03-11" />
 
-<title>Journal 1</title>
+<title>Journal 3</title>
 
 <script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -383,113 +384,22 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Journal 1</h1>
+<h1 class="title toc-ignore">Journal 3</h1>
 <h4 class="author">Kalle Stoffers</h4>
+<h4 class="date">2026-03-11</h4>
 
 </div>
 
 
-<p>Last compiled on maart, 2026</p>
-<p><br></p>
-<hr />
-<div id="first-look-at-solar-panel-data" class="section level2"
-number="1">
-<h2><span class="header-section-number">1</span> First look at solar
-panel data</h2>
-<p>Packages</p>
-<pre class="r"><code>library(tidyverse)</code></pre>
-<p>Loading data from all years. De data can be downloaded here: <a
-href="https://westlandinfra.nl/over-westland-infra/duurzaamheid-innovaties/open-data/"
-class="uri">https://westlandinfra.nl/over-westland-infra/duurzaamheid-innovaties/open-data/</a></p>
-<pre class="r"><code>pv24 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruikgegevens_01_01_2024(1).csv&quot;)|&gt; filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2024) |&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv23 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2023.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2023) |&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv22 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2022.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2022) |&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv21 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2021.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2021)|&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv20 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2020.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2020)|&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv19 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2019.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2019)|&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv18 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2018.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2018)|&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv17 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2017.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2017)|&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv16 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2016.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2016)|&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv15 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2015.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2015)|&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv14 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2014.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2014)|&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv13 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2013.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2013)|&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))
-
-pv12 &lt;- read.delim(&quot;C:/Users/kalle/Downloads/Westland_Infra_kleinverbruiksgegevens_01_01_2012.csv&quot;) |&gt;
-  filter(PRODUCTSOORT == &quot;ELK&quot;) |&gt;
-  mutate(year = 2012)|&gt;
-  mutate(X.Slimme.Meter = as.integer(X.Slimme.Meter))</code></pre>
-<p>Merging, sorting and saving data</p>
-<pre class="r"><code>pv &lt;- bind_rows(
-  pv24, pv23, pv22, pv21, pv20, pv19, pv18, pv17, pv16, pv15, pv14, pv13, pv12) |&gt;
-  arrange(STRAATNAAM, year) |&gt;
-  relocate(STRAATNAAM, POSTCODE_VAN, POSTCODE_TOT, year, X.Leveringsrichting)
-
-saveRDS(pv, file = &quot;./data/pv_data.Rds&quot;)</code></pre>
-<p>Solar energy over time</p>
-<pre class="r"><code>class(pv$X.Leveringsrichting)</code></pre>
-<pre><code>## [1] &quot;character&quot;</code></pre>
-<pre class="r"><code>pv$X.Leveringsrichting &lt;- as.numeric(pv$X.Leveringsrichting)</code></pre>
-<pre><code>## Warning: NAs introduced by coercion</code></pre>
-<pre class="r"><code>pv |&gt;
-  group_by(year) |&gt;
-  summarise(yearly_avg = mean(X.Leveringsrichting, na.rm = TRUE)) |&gt;
-  ggplot(aes(x = year, y = yearly_avg)) +
-  geom_line() +
-  geom_point() +
-  scale_y_continuous(limits = c(0, 100)) +
-  scale_x_continuous(breaks = seq(min(pv$year), max(pv$year), by = 2))+
-  theme_minimal()</code></pre>
-<p><img src="lab1_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
-<hr />
+<div id="exploring-the-data" class="section level2" number="1">
+<h2><span class="header-section-number">1</span> Exploring the data</h2>
+<p>Relevant packages</p>
+<p>Analyze: social network analyze met een weighted social network
+waarbij het gewicht de afstand is tussen de centroides van twee
+straten?</p>
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIkpvdXJuYWwgMSINCiNiaWJsaW9ncmFwaHk6IHJlZmVyZW5jZXMuYmliDQphdXRob3I6ICJLYWxsZSBTdG9mZmVycyINCi0tLQ0KDQpMYXN0IGNvbXBpbGVkIG9uIGByIGZvcm1hdChTeXMudGltZSgpLCAnJUIsICVZJylgDQoNCjxicj4NCg0KLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tDQoNCiMjIEZpcnN0IGxvb2sgYXQgc29sYXIgcGFuZWwgZGF0YQ0KDQpQYWNrYWdlcw0KDQpgYGB7ciBtZXNzYWdlID0gRkFMU0UsIHdhcm5pbmcgPSBGQUxTRX0NCmxpYnJhcnkodGlkeXZlcnNlKQ0KYGBgDQoNCkxvYWRpbmcgZGF0YSBmcm9tIGFsbCB5ZWFycy4gRGUgZGF0YSBjYW4gYmUgZG93bmxvYWRlZCBoZXJlOiA8aHR0cHM6Ly93ZXN0bGFuZGluZnJhLm5sL292ZXItd2VzdGxhbmQtaW5mcmEvZHV1cnphYW1oZWlkLWlubm92YXRpZXMvb3Blbi1kYXRhLz4NCg0KYGBge3IgZWNobyA9IFRSVUUsIHJlc3VsdHMgPSAnaGlkZScsIG1lc3NhZ2UgPSBGQUxTRSwgd2FybmluZyA9IEZBTFNFfQ0KcHYyNCA8LSByZWFkLmRlbGltKCJDOi9Vc2Vycy9rYWxsZS9Eb3dubG9hZHMvV2VzdGxhbmRfSW5mcmFfa2xlaW52ZXJicnVpa2dlZ2V2ZW5zXzAxXzAxXzIwMjQoMSkuY3N2Iil8PiBmaWx0ZXIoUFJPRFVDVFNPT1JUID09ICJFTEsiKSB8Pg0KICBtdXRhdGUoeWVhciA9IDIwMjQpIHw+DQogIG11dGF0ZShYLlNsaW1tZS5NZXRlciA9IGFzLmludGVnZXIoWC5TbGltbWUuTWV0ZXIpKQ0KDQpwdjIzIDwtIHJlYWQuZGVsaW0oIkM6L1VzZXJzL2thbGxlL0Rvd25sb2Fkcy9XZXN0bGFuZF9JbmZyYV9rbGVpbnZlcmJydWlrc2dlZ2V2ZW5zXzAxXzAxXzIwMjMuY3N2IikgfD4NCiAgZmlsdGVyKFBST0RVQ1RTT09SVCA9PSAiRUxLIikgfD4NCiAgbXV0YXRlKHllYXIgPSAyMDIzKSB8Pg0KICBtdXRhdGUoWC5TbGltbWUuTWV0ZXIgPSBhcy5pbnRlZ2VyKFguU2xpbW1lLk1ldGVyKSkNCg0KcHYyMiA8LSByZWFkLmRlbGltKCJDOi9Vc2Vycy9rYWxsZS9Eb3dubG9hZHMvV2VzdGxhbmRfSW5mcmFfa2xlaW52ZXJicnVpa3NnZWdldmVuc18wMV8wMV8yMDIyLmNzdiIpIHw+DQogIGZpbHRlcihQUk9EVUNUU09PUlQgPT0gIkVMSyIpIHw+DQogIG11dGF0ZSh5ZWFyID0gMjAyMikgfD4NCiAgbXV0YXRlKFguU2xpbW1lLk1ldGVyID0gYXMuaW50ZWdlcihYLlNsaW1tZS5NZXRlcikpDQoNCnB2MjEgPC0gcmVhZC5kZWxpbSgiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL1dlc3RsYW5kX0luZnJhX2tsZWludmVyYnJ1aWtzZ2VnZXZlbnNfMDFfMDFfMjAyMS5jc3YiKSB8Pg0KICBmaWx0ZXIoUFJPRFVDVFNPT1JUID09ICJFTEsiKSB8Pg0KICBtdXRhdGUoeWVhciA9IDIwMjEpfD4NCiAgbXV0YXRlKFguU2xpbW1lLk1ldGVyID0gYXMuaW50ZWdlcihYLlNsaW1tZS5NZXRlcikpDQoNCnB2MjAgPC0gcmVhZC5kZWxpbSgiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL1dlc3RsYW5kX0luZnJhX2tsZWludmVyYnJ1aWtzZ2VnZXZlbnNfMDFfMDFfMjAyMC5jc3YiKSB8Pg0KICBmaWx0ZXIoUFJPRFVDVFNPT1JUID09ICJFTEsiKSB8Pg0KICBtdXRhdGUoeWVhciA9IDIwMjApfD4NCiAgbXV0YXRlKFguU2xpbW1lLk1ldGVyID0gYXMuaW50ZWdlcihYLlNsaW1tZS5NZXRlcikpDQoNCnB2MTkgPC0gcmVhZC5kZWxpbSgiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL1dlc3RsYW5kX0luZnJhX2tsZWludmVyYnJ1aWtzZ2VnZXZlbnNfMDFfMDFfMjAxOS5jc3YiKSB8Pg0KICBmaWx0ZXIoUFJPRFVDVFNPT1JUID09ICJFTEsiKSB8Pg0KICBtdXRhdGUoeWVhciA9IDIwMTkpfD4NCiAgbXV0YXRlKFguU2xpbW1lLk1ldGVyID0gYXMuaW50ZWdlcihYLlNsaW1tZS5NZXRlcikpDQoNCnB2MTggPC0gcmVhZC5kZWxpbSgiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL1dlc3RsYW5kX0luZnJhX2tsZWludmVyYnJ1aWtzZ2VnZXZlbnNfMDFfMDFfMjAxOC5jc3YiKSB8Pg0KICBmaWx0ZXIoUFJPRFVDVFNPT1JUID09ICJFTEsiKSB8Pg0KICBtdXRhdGUoeWVhciA9IDIwMTgpfD4NCiAgbXV0YXRlKFguU2xpbW1lLk1ldGVyID0gYXMuaW50ZWdlcihYLlNsaW1tZS5NZXRlcikpDQoNCnB2MTcgPC0gcmVhZC5kZWxpbSgiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL1dlc3RsYW5kX0luZnJhX2tsZWludmVyYnJ1aWtzZ2VnZXZlbnNfMDFfMDFfMjAxNy5jc3YiKSB8Pg0KICBmaWx0ZXIoUFJPRFVDVFNPT1JUID09ICJFTEsiKSB8Pg0KICBtdXRhdGUoeWVhciA9IDIwMTcpfD4NCiAgbXV0YXRlKFguU2xpbW1lLk1ldGVyID0gYXMuaW50ZWdlcihYLlNsaW1tZS5NZXRlcikpDQoNCnB2MTYgPC0gcmVhZC5kZWxpbSgiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL1dlc3RsYW5kX0luZnJhX2tsZWludmVyYnJ1aWtzZ2VnZXZlbnNfMDFfMDFfMjAxNi5jc3YiKSB8Pg0KICBmaWx0ZXIoUFJPRFVDVFNPT1JUID09ICJFTEsiKSB8Pg0KICBtdXRhdGUoeWVhciA9IDIwMTYpfD4NCiAgbXV0YXRlKFguU2xpbW1lLk1ldGVyID0gYXMuaW50ZWdlcihYLlNsaW1tZS5NZXRlcikpDQoNCnB2MTUgPC0gcmVhZC5kZWxpbSgiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL1dlc3RsYW5kX0luZnJhX2tsZWludmVyYnJ1aWtzZ2VnZXZlbnNfMDFfMDFfMjAxNS5jc3YiKSB8Pg0KICBmaWx0ZXIoUFJPRFVDVFNPT1JUID09ICJFTEsiKSB8Pg0KICBtdXRhdGUoeWVhciA9IDIwMTUpfD4NCiAgbXV0YXRlKFguU2xpbW1lLk1ldGVyID0gYXMuaW50ZWdlcihYLlNsaW1tZS5NZXRlcikpDQoNCnB2MTQgPC0gcmVhZC5kZWxpbSgiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL1dlc3RsYW5kX0luZnJhX2tsZWludmVyYnJ1aWtzZ2VnZXZlbnNfMDFfMDFfMjAxNC5jc3YiKSB8Pg0KICBmaWx0ZXIoUFJPRFVDVFNPT1JUID09ICJFTEsiKSB8Pg0KICBtdXRhdGUoeWVhciA9IDIwMTQpfD4NCiAgbXV0YXRlKFguU2xpbW1lLk1ldGVyID0gYXMuaW50ZWdlcihYLlNsaW1tZS5NZXRlcikpDQoNCnB2MTMgPC0gcmVhZC5kZWxpbSgiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL1dlc3RsYW5kX0luZnJhX2tsZWludmVyYnJ1aWtzZ2VnZXZlbnNfMDFfMDFfMjAxMy5jc3YiKSB8Pg0KICBmaWx0ZXIoUFJPRFVDVFNPT1JUID09ICJFTEsiKSB8Pg0KICBtdXRhdGUoeWVhciA9IDIwMTMpfD4NCiAgbXV0YXRlKFguU2xpbW1lLk1ldGVyID0gYXMuaW50ZWdlcihYLlNsaW1tZS5NZXRlcikpDQoNCnB2MTIgPC0gcmVhZC5kZWxpbSgiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL1dlc3RsYW5kX0luZnJhX2tsZWludmVyYnJ1aWtzZ2VnZXZlbnNfMDFfMDFfMjAxMi5jc3YiKSB8Pg0KICBmaWx0ZXIoUFJPRFVDVFNPT1JUID09ICJFTEsiKSB8Pg0KICBtdXRhdGUoeWVhciA9IDIwMTIpfD4NCiAgbXV0YXRlKFguU2xpbW1lLk1ldGVyID0gYXMuaW50ZWdlcihYLlNsaW1tZS5NZXRlcikpDQoNCmBgYA0KDQpNZXJnaW5nLCBzb3J0aW5nIGFuZCBzYXZpbmcgZGF0YQ0KDQpgYGB7cn0NCg0KcHYgPC0gYmluZF9yb3dzKA0KICBwdjI0LCBwdjIzLCBwdjIyLCBwdjIxLCBwdjIwLCBwdjE5LCBwdjE4LCBwdjE3LCBwdjE2LCBwdjE1LCBwdjE0LCBwdjEzLCBwdjEyKSB8Pg0KICBhcnJhbmdlKFNUUkFBVE5BQU0sIHllYXIpIHw+DQogIHJlbG9jYXRlKFNUUkFBVE5BQU0sIFBPU1RDT0RFX1ZBTiwgUE9TVENPREVfVE9ULCB5ZWFyLCBYLkxldmVyaW5nc3JpY2h0aW5nKQ0KDQpzYXZlUkRTKHB2LCBmaWxlID0gIi4vZGF0YS9wdl9kYXRhLlJkcyIpDQoNCmBgYA0KDQpTb2xhciBlbmVyZ3kgb3ZlciB0aW1lDQoNCmBgYHtyfQ0KDQpjbGFzcyhwdiRYLkxldmVyaW5nc3JpY2h0aW5nKQ0KcHYkWC5MZXZlcmluZ3NyaWNodGluZyA8LSBhcy5udW1lcmljKHB2JFguTGV2ZXJpbmdzcmljaHRpbmcpDQoNCnB2IHw+DQogIGdyb3VwX2J5KHllYXIpIHw+DQogIHN1bW1hcmlzZSh5ZWFybHlfYXZnID0gbWVhbihYLkxldmVyaW5nc3JpY2h0aW5nLCBuYS5ybSA9IFRSVUUpKSB8Pg0KICBnZ3Bsb3QoYWVzKHggPSB5ZWFyLCB5ID0geWVhcmx5X2F2ZykpICsNCiAgZ2VvbV9saW5lKCkgKw0KICBnZW9tX3BvaW50KCkgKw0KICBzY2FsZV95X2NvbnRpbnVvdXMobGltaXRzID0gYygwLCAxMDApKSArDQogIHNjYWxlX3hfY29udGludW91cyhicmVha3MgPSBzZXEobWluKHB2JHllYXIpLCBtYXgocHYkeWVhciksIGJ5ID0gMikpKw0KICB0aGVtZV9taW5pbWFsKCkNCg0KDQpgYGANCg0KLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tDQo=</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIkpvdXJuYWwgMyINCmF1dGhvcjogIkthbGxlIFN0b2ZmZXJzIg0KZGF0ZTogIjIwMjYtMDMtMTEiDQpvdXRwdXQ6IGh0bWxfZG9jdW1lbnQNCi0tLQ0KDQpgYGB7ciBzZXR1cCwgaW5jbHVkZT1GQUxTRX0NCmtuaXRyOjpvcHRzX2NodW5rJHNldChlY2hvID0gVFJVRSkNCmBgYA0KDQojIyBFeHBsb3JpbmcgdGhlIGRhdGENCg0KUmVsZXZhbnQgcGFja2FnZXMNCg0KYGBge3J9DQoNCmBgYA0KDQpBbmFseXplOiBzb2NpYWwgbmV0d29yayBhbmFseXplIG1ldCBlZW4gd2VpZ2h0ZWQgc29jaWFsIG5ldHdvcmsgd2FhcmJpaiBoZXQgZ2V3aWNodCBkZSBhZnN0YW5kIGlzIHR1c3NlbiBkZSBjZW50cm9pZGVzIHZhbiB0d2VlIHN0cmF0ZW4/DQo=</div>
 
 
 </div>
@@ -527,7 +437,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
-  window.initializeSourceEmbed("lab1.Rmd");
+  window.initializeSourceEmbed("lab3.Rmd");
   window.initializeCodeFolding("show" === "show");
 });
 </script>

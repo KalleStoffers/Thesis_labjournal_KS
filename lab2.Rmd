@@ -1,5 +1,5 @@
 ---
-title: "lab2"
+title: "Journal 2"
 author: "Kalle Stoffers"
 date: "2026-03-04"
 output: html_document
@@ -15,35 +15,40 @@ Last compiled on `r format(Sys.time(), '%B, %Y')`
 
 After having assembled the solar panel data, it is time to connect it to the demographic characteristics of the area.
 
-Relevant packages
+First, we load the relevant packages
 
 ```{r eval = FALSE, message=FALSE}
-#install.packages("sf")
-
 rm(list=ls())
 
-#library(fuzzyjoin)
-library (data.table)
 library(tidyverse)
 library(sf)
-#library(tidygeocoder)
 ```
 
-Leeftijd, etnische afkomst, percentage eigendom, WOZ-waarde, elektriciteitsgebruik is op postcodeniveau bekend, dus importeren we de CBS gegevens per PC6 postcode. Die zijn hier te downloaden: <https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode>
+Age, ethnic background, percentage of home ownership, average property value and electricity usage is known at the postal code level, so we import the CBS data per PC6 postal code. These data can be downloaded here: <https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode>
 
 ```{r eval = FALSE, results = 'hide', message = FALSE, warning = FALSE}
+#load data
 cbs_pc6_24 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_pc6_2024_v1.gpkg") |>
   mutate (year = 2024)
 cbs_pc6_23 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_pc6_2023_v2.gpkg") |>
   mutate (year = 2023)
 cbs_pc6_22 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_pc6_2022_vol.gpkg") |>
   mutate (year = 2022)
+cbs_pc6_21 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_pc6_2021_vol.gpkg") |>
+  mutate (year = 2021)
 
-```
+#data from 2020 and 2019 is unavailable at this moment but will be available before the 1st of May
 
-Merge CBS data en -9997 en -9995 op NA zetten.
+cbs_pc6_18 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2018-v3/CBS_PC6_2018_v3.shp") |>    mutate (year = 2018)
+cbs_pc6_17 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2017-v3/CBS_PC6_2017_v3.shp") |>
+  mutate (year = 2017)
+cbs_pc6_16 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2016-v2/CBS_PC6_2016_v2.shp") |>
+  mutate (year = 2016)
+cbs_pc6_15 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2015-v2/CBS_PC6_2015_v2.shp") |>
+  mutate (year = 2015)
 
-```{r eval=FALSE}
+
+#merge and NAs
 cbs_pc6 <- bind_rows(cbs_pc6_24, cbs_pc6_23, cbs_pc6_22) |>
   arrange (postcode6, year) |>
   relocate (postcode6, year, geom)|>
@@ -51,14 +56,16 @@ cbs_pc6 <- bind_rows(cbs_pc6_24, cbs_pc6_23, cbs_pc6_22) |>
   mutate(across(where(is.numeric), ~na_if(., -99995)))
 ```
 
-Een aantal van de straten in de PV data hebben meerdere postcodes:
+Some streets in the PV data have multiple postal codes:
 
 ```{r eval=FALSE}
+#load pv data and add id
 pv <- readRDS("./data/pv_data.Rds") |>
   filter(year >= 2022) |>
   mutate(id = row_number()) |>
   relocate(id)
 
+#check for multiple postal codes per street
 meerdere_postcodes <- pv |> 
   mutate(same_pc = if_else(POSTCODE_VAN == POSTCODE_TOT, 1, 0)) |>
   filter(same_pc == 0) |>
@@ -66,12 +73,10 @@ meerdere_postcodes <- pv |>
 
 ```
 
-Daarom selecteren we eerst de losse cbs postcodes die bij de pv straten horen
+We select the CBS postal codes which match the streets from the PV data.
 
-```{r eval=FALSE}
-#voor elke rij in pv, selecteer de rij(en) in cbs_pc6 die voldoen aan de voorwaarden cbs_pc6$year=pv$year EN pv$POSTCODE_VAN >= cbs_pc6$postcode6 <= pv$POSTCODE_TOT van die rij in pv. maak voor die rijen in cbs_pc6 een kolom "id" aan en ken de waarde van de desbetrrefende pv$id toe. 
-
-cbs_pc6 |>
+```{r eval=FALSE, results = 'hide'}
+cbs_pc6_sel <- cbs_pc6 |>
   inner_join(
     pv, 
     by = join_by(
@@ -79,35 +84,84 @@ cbs_pc6 |>
       postcode6 >= POSTCODE_VAN,
       postcode6 <= POSTCODE_TOT
     )
-  )
-
-
-#################################################################
-#setDT(pv)
-#setDT(cbs_pc6)
-
-#resultaat <- cbs_pc6[pv, 
- #                    on = .(year == year, 
-  #                          postcode6 >= POSTCODE_VAN, 
- #                           postcode6 <= POSTCODE_TOT), 
-  #                   nomatch = NULL]
-
-
-
+  ) |>
+  relocate(postcode6, geom, year, id, POSTCODE_VAN, POSTCODE_TOT, STRAATNAAM, X.Leveringsrichting)
 
 ```
 
-Dan kunnen we vervolgens de CBS data mergen met de PV data:
-
-```{r}
-
-#df_merging <- left_join(pv, cbs_pc6, by = c('POSTCODE_VAN'='postcode6', 'year'='year'))
-
-```
-
-Inkomen en stedelijkheid is alleen beschikbaar per 500m x 500m vierkanten. De data daarvan is hier te downloaden: <https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/kaart-van-500-meter-bij-500-meter-met-statistieken>
+Now we collapse the multiple rows into a single row per street in the PV data.
 
 ```{r eval=FALSE}
+df <- cbs_pc6_sel |>
+  group_by(id) |>
+  summarise(
+    
+    geometry = sf::st_union(geom),
+    
+    across(
+      c(
+        POSTCODE_VAN, 
+        POSTCODE_TOT, 
+        STRAATNAAM, 
+        year,
+        X.Leveringsrichting
+        ), 
+           first),
+    
+    across(
+      c(
+        percentage_geb_nederland_herkomst_nederland,
+        percentage_geb_nederland_herkomst_overig_europa,
+        percentage_geb_nederland_herkomst_buiten_europa,
+        percentage_geb_buiten_nederland_herkomst_europa,
+        percentage_geb_buiten_nederland_herkmst_buiten_europa
+      ),
+      ~ weighted.mean(.x, aantal_inwoners, na.rm = TRUE)
+    ),
+    
+    gemiddelde_huishoudensgrootte = 
+      weighted.mean(gemiddelde_huishoudensgrootte,
+                    aantal_part_huishoudens, 
+                    na.rm = TRUE),
+    
+    across(
+      c(
+        percentage_koopwoningen, 
+        percentage_huurwoningen, 
+        gemiddelde_woz_waarde_woning, 
+        gemiddeld_elektriciteitsverbruik_woning
+        ), 
+           ~weighted.mean(.x, aantal_woningen, na.rm = TRUE)
+      ),
+    
+    across(
+      c(
+        aantal_inwoners,
+        aantal_mannen,
+        aantal_vrouwen,
+        aantal_inwoners_0_tot_15_jaar,
+        aantal_inwoners_15_tot_25_jaar,
+        aantal_inwoners_25_tot_45_jaar,
+        aantal_inwoners_45_tot_65_jaar,
+        aantal_inwoners_65_jaar_en_ouder,
+        aantal_part_huishoudens,
+        aantal_woningen,
+        aantal_huurwoningen_in_bezit_woningcorporaties,
+        aantal_niet_bewoonde_woningen,
+        aantal_personen_met_uitkering_onder_aowlft
+      ),
+      ~ sum(.x, na.rm = TRUE)
+      )
+  ) |>
+  rename(postcode_van = POSTCODE_VAN,
+         postcode_tot = POSTCODE_TOT,
+         straatnaam = STRAATNAAM,
+         leveringsrichting = X.Leveringsrichting)
+```
+
+Income and urbanity/density are only available per 500m x 500m square. This data can be downloaded here: [https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/kaart-van-500-meter-bij-500-meter-met-statistieken](#0){.uri}
+
+```{r eval=FALSE, message = FALSE}
 cbs_500_24 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_vk500_2024_v1.gpkg") |>
   mutate (year = 2024)
 cbs_500_23 <- st_read(dsn = "C:/Users/kalle/Downloads/2025-cbs_vk500_2023_v2/cbs_vk500_2023_v2.gpkg") |>
@@ -115,24 +169,39 @@ cbs_500_23 <- st_read(dsn = "C:/Users/kalle/Downloads/2025-cbs_vk500_2023_v2/cbs
 cbs_500_22 <- st_read(dsn = "C:/Users/kalle/Downloads/2025-cbs_vk500_2022_vol/cbs_vk500_2022_vol.gpkg") |>
   mutate (year = 2022)
 
-cbs_500 <- bind_rows(cbs_500_24, cbs_500_23, cbs_500_22)
+cbs_500 <- bind_rows(cbs_500_24, cbs_500_23, cbs_500_22) |>
   
+  select(crs28992res500m, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid, geom, year)|>
+  
+  relocate(crs28992res500m, geom, year, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid) |>
+  
+  mutate(across(where(is.numeric), ~na_if(., -99997))) |>
+  mutate(across(where(is.numeric), ~na_if(., -99995)))
+```
+
+Now we join the squares with the postal code areas based on the largest overlapping area.
+
+```{r eval =FALSE}
+#match the squares belonging to the postal code area and keep only the square id
+df <- df |>
+  st_join(cbs_500,join = st_intersects, left = T, largest = T) |>
+  select(-c(year.y, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid))
+
+#match the square attributes in the right year
+df <- df |>
+  left_join (st_drop_geometry(cbs_500), by = c("crs28992res500m", "year.x" = "year")) |>
+  rename(year = year.x)
 
 ```
 
-Nu moeten we de coordinaten van de centroide van elke postcode achterhalen en koppelen aan een 500x500 vierkant.
-
-```{r}
-
-
-
+```{r eval=FALSE}
+df <- df |> 
+  mutate(across(where(is.numeric), ~na_if(., NaN)))
 ```
 
-Vervolgens kunnen we dit punt koppelen aan een 500x500 vierkant.
+Saving the data!
 
-```{r}
-
+```{r eval=FALSE}
+saveRDS(df, file = "./data/merged_data.Rds")
 
 ```
-
-Analyse: social network analyze met een weighted social network waarbij het gewicht de afstand is tussen de centroides van twee straten?

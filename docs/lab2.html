@@ -13,7 +13,7 @@
 
 <meta name="date" content="2026-03-04" />
 
-<title>lab2</title>
+<title>Journal 2</title>
 
 <script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -352,6 +352,9 @@ div.tocify {
     <li>
       <a href="lab2.html">Page 2</a>
     </li>
+    <li>
+      <a href="lab3.html">Page 3</a>
+    </li>
   </ul>
 </li>
       </ul>
@@ -381,7 +384,7 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">lab2</h1>
+<h1 class="title toc-ignore">Journal 2</h1>
 <h4 class="author">Kalle Stoffers</h4>
 <h4 class="date">2026-03-04</h4>
 
@@ -396,49 +399,59 @@ div.tocify {
 data</h2>
 <p>After having assembled the solar panel data, it is time to connect it
 to the demographic characteristics of the area.</p>
-<p>Relevant packages</p>
-<pre class="r"><code>#install.packages(&quot;sf&quot;)
+<p>First, we load the relevant packages</p>
+<pre class="r"><code>rm(list=ls())
 
-rm(list=ls())
-
-#library(fuzzyjoin)
-library (data.table)
 library(tidyverse)
-library(sf)
-#library(tidygeocoder)</code></pre>
-<p>Leeftijd, etnische afkomst, percentage eigendom, WOZ-waarde,
-elektriciteitsgebruik is op postcodeniveau bekend, dus importeren we de
-CBS gegevens per PC6 postcode. Die zijn hier te downloaden: <a
+library(sf)</code></pre>
+<p>Age, ethnic background, percentage of home ownership, average
+property value and electricity usage is known at the postal code level,
+so we import the CBS data per PC6 postal code. These data can be
+downloaded here: <a
 href="https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode"
 class="uri">https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode</a></p>
-<pre class="r"><code>cbs_pc6_24 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/cbs_pc6_2024_v1.gpkg&quot;) |&gt;
+<pre class="r"><code>#load data
+cbs_pc6_24 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/cbs_pc6_2024_v1.gpkg&quot;) |&gt;
   mutate (year = 2024)
 cbs_pc6_23 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/cbs_pc6_2023_v2.gpkg&quot;) |&gt;
   mutate (year = 2023)
 cbs_pc6_22 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/cbs_pc6_2022_vol.gpkg&quot;) |&gt;
-  mutate (year = 2022)</code></pre>
-<p>Merge CBS data en -9997 en -9995 op NA zetten.</p>
-<pre class="r"><code>cbs_pc6 &lt;- bind_rows(cbs_pc6_24, cbs_pc6_23, cbs_pc6_22) |&gt;
+  mutate (year = 2022)
+cbs_pc6_21 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/cbs_pc6_2021_vol.gpkg&quot;) |&gt;
+  mutate (year = 2021)
+
+#data from 2020 and 2019 is unavailable at this moment but will be available before the 1st of May
+
+cbs_pc6_18 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/CBS-PC6-2018-v3/CBS_PC6_2018_v3.shp&quot;) |&gt;    mutate (year = 2018)
+cbs_pc6_17 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/CBS-PC6-2017-v3/CBS_PC6_2017_v3.shp&quot;) |&gt;
+  mutate (year = 2017)
+cbs_pc6_16 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/CBS-PC6-2016-v2/CBS_PC6_2016_v2.shp&quot;) |&gt;
+  mutate (year = 2016)
+cbs_pc6_15 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/CBS-PC6-2015-v2/CBS_PC6_2015_v2.shp&quot;) |&gt;
+  mutate (year = 2015)
+
+
+#merge and NAs
+cbs_pc6 &lt;- bind_rows(cbs_pc6_24, cbs_pc6_23, cbs_pc6_22) |&gt;
   arrange (postcode6, year) |&gt;
   relocate (postcode6, year, geom)|&gt;
   mutate(across(where(is.numeric), ~na_if(., -99997))) |&gt;
   mutate(across(where(is.numeric), ~na_if(., -99995)))</code></pre>
-<p>Een aantal van de straten in de PV data hebben meerdere
-postcodes:</p>
-<pre class="r"><code>pv &lt;- readRDS(&quot;./data/pv_data.Rds&quot;) |&gt;
+<p>Some streets in the PV data have multiple postal codes:</p>
+<pre class="r"><code>#load pv data and add id
+pv &lt;- readRDS(&quot;./data/pv_data.Rds&quot;) |&gt;
   filter(year &gt;= 2022) |&gt;
   mutate(id = row_number()) |&gt;
   relocate(id)
 
+#check for multiple postal codes per street
 meerdere_postcodes &lt;- pv |&gt; 
   mutate(same_pc = if_else(POSTCODE_VAN == POSTCODE_TOT, 1, 0)) |&gt;
   filter(same_pc == 0) |&gt;
   distinct(STRAATNAAM, POSTCODE_VAN, POSTCODE_TOT, .keep_all = TRUE)</code></pre>
-<p>Daarom selecteren we eerst de losse cbs postcodes die bij de pv
-straten horen</p>
-<pre class="r"><code>#voor elke rij in pv, selecteer de rij(en) in cbs_pc6 die voldoen aan de voorwaarden cbs_pc6$year=pv$year EN pv$POSTCODE_VAN &gt;= cbs_pc6$postcode6 &lt;= pv$POSTCODE_TOT van die rij in pv. maak voor die rijen in cbs_pc6 een kolom &quot;id&quot; aan en ken de waarde van de desbetrrefende pv$id toe. 
-
-cbs_pc6 |&gt;
+<p>We select the CBS postal codes which match the streets from the PV
+data.</p>
+<pre class="r"><code>cbs_pc6_sel &lt;- cbs_pc6 |&gt;
   inner_join(
     pv, 
     by = join_by(
@@ -446,23 +459,77 @@ cbs_pc6 |&gt;
       postcode6 &gt;= POSTCODE_VAN,
       postcode6 &lt;= POSTCODE_TOT
     )
-  )
-
-
-#################################################################
-#setDT(pv)
-#setDT(cbs_pc6)
-
-#resultaat &lt;- cbs_pc6[pv, 
- #                    on = .(year == year, 
-  #                          postcode6 &gt;= POSTCODE_VAN, 
- #                           postcode6 &lt;= POSTCODE_TOT), 
-  #                   nomatch = NULL]</code></pre>
-<p>Dan kunnen we vervolgens de CBS data mergen met de PV data:</p>
-<pre class="r"><code>#df_merging &lt;- left_join(pv, cbs_pc6, by = c(&#39;POSTCODE_VAN&#39;=&#39;postcode6&#39;, &#39;year&#39;=&#39;year&#39;))</code></pre>
-<p>Inkomen en stedelijkheid is alleen beschikbaar per 500m x 500m
-vierkanten. De data daarvan is hier te downloaden: <a
-href="https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/kaart-van-500-meter-bij-500-meter-met-statistieken"
+  ) |&gt;
+  relocate(postcode6, geom, year, id, POSTCODE_VAN, POSTCODE_TOT, STRAATNAAM, X.Leveringsrichting)</code></pre>
+<p>Now we collapse the multiple rows into a single row per street in the
+PV data.</p>
+<pre class="r"><code>df &lt;- cbs_pc6_sel |&gt;
+  group_by(id) |&gt;
+  summarise(
+    
+    geometry = sf::st_union(geom),
+    
+    across(
+      c(
+        POSTCODE_VAN, 
+        POSTCODE_TOT, 
+        STRAATNAAM, 
+        year,
+        X.Leveringsrichting
+        ), 
+           first),
+    
+    across(
+      c(
+        percentage_geb_nederland_herkomst_nederland,
+        percentage_geb_nederland_herkomst_overig_europa,
+        percentage_geb_nederland_herkomst_buiten_europa,
+        percentage_geb_buiten_nederland_herkomst_europa,
+        percentage_geb_buiten_nederland_herkmst_buiten_europa
+      ),
+      ~ weighted.mean(.x, aantal_inwoners, na.rm = TRUE)
+    ),
+    
+    gemiddelde_huishoudensgrootte = 
+      weighted.mean(gemiddelde_huishoudensgrootte,
+                    aantal_part_huishoudens, 
+                    na.rm = TRUE),
+    
+    across(
+      c(
+        percentage_koopwoningen, 
+        percentage_huurwoningen, 
+        gemiddelde_woz_waarde_woning, 
+        gemiddeld_elektriciteitsverbruik_woning
+        ), 
+           ~weighted.mean(.x, aantal_woningen, na.rm = TRUE)
+      ),
+    
+    across(
+      c(
+        aantal_inwoners,
+        aantal_mannen,
+        aantal_vrouwen,
+        aantal_inwoners_0_tot_15_jaar,
+        aantal_inwoners_15_tot_25_jaar,
+        aantal_inwoners_25_tot_45_jaar,
+        aantal_inwoners_45_tot_65_jaar,
+        aantal_inwoners_65_jaar_en_ouder,
+        aantal_part_huishoudens,
+        aantal_woningen,
+        aantal_huurwoningen_in_bezit_woningcorporaties,
+        aantal_niet_bewoonde_woningen,
+        aantal_personen_met_uitkering_onder_aowlft
+      ),
+      ~ sum(.x, na.rm = TRUE)
+      )
+  ) |&gt;
+  rename(postcode_van = POSTCODE_VAN,
+         postcode_tot = POSTCODE_TOT,
+         straatnaam = STRAATNAAM,
+         leveringsrichting = X.Leveringsrichting)</code></pre>
+<p>Income and urbanity/density are only available per 500m x 500m
+square. This data can be downloaded here: <a href="#id_0"
 class="uri">https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/kaart-van-500-meter-bij-500-meter-met-statistieken</a></p>
 <pre class="r"><code>cbs_500_24 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/cbs_vk500_2024_v1.gpkg&quot;) |&gt;
   mutate (year = 2024)
@@ -471,16 +538,32 @@ cbs_500_23 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/2025-cbs_vk500_202
 cbs_500_22 &lt;- st_read(dsn = &quot;C:/Users/kalle/Downloads/2025-cbs_vk500_2022_vol/cbs_vk500_2022_vol.gpkg&quot;) |&gt;
   mutate (year = 2022)
 
-cbs_500 &lt;- bind_rows(cbs_500_24, cbs_500_23, cbs_500_22)</code></pre>
-<p>Nu moeten we de coordinaten van de centroide van elke postcode
-achterhalen en koppelen aan een 500x500 vierkant.</p>
-<p>Vervolgens kunnen we dit punt koppelen aan een 500x500 vierkant.</p>
-<p>Analyse: social network analyze met een weighted social network
-waarbij het gewicht de afstand is tussen de centroides van twee
-straten?</p>
+cbs_500 &lt;- bind_rows(cbs_500_24, cbs_500_23, cbs_500_22) |&gt;
+  
+  select(crs28992res500m, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid, geom, year)|&gt;
+  
+  relocate(crs28992res500m, geom, year, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid) |&gt;
+  
+  mutate(across(where(is.numeric), ~na_if(., -99997))) |&gt;
+  mutate(across(where(is.numeric), ~na_if(., -99995)))</code></pre>
+<p>Now we join the squares with the postal code areas based on the
+largest overlapping area.</p>
+<pre class="r"><code>#match the squares belonging to the postal code area and keep only the square id
+df &lt;- df |&gt;
+  st_join(cbs_500,join = st_intersects, left = T, largest = T) |&gt;
+  select(-c(year.y, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid))
+
+#match the square attributes in the right year
+df &lt;- df |&gt;
+  left_join (st_drop_geometry(cbs_500), by = c(&quot;crs28992res500m&quot;, &quot;year.x&quot; = &quot;year&quot;)) |&gt;
+  rename(year = year.x)</code></pre>
+<pre class="r"><code>df &lt;- df |&gt; 
+  mutate(across(where(is.numeric), ~na_if(., NaN)))</code></pre>
+<p>Saving the data!</p>
+<pre class="r"><code>saveRDS(df, file = &quot;./data/merged_data.Rds&quot;)</code></pre>
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogImxhYjIiDQphdXRob3I6ICJLYWxsZSBTdG9mZmVycyINCmRhdGU6ICIyMDI2LTAzLTA0Ig0Kb3V0cHV0OiBodG1sX2RvY3VtZW50DQotLS0NCg0KTGFzdCBjb21waWxlZCBvbiBgciBmb3JtYXQoU3lzLnRpbWUoKSwgJyVCLCAlWScpYA0KDQo8YnI+DQoNCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQ0KDQojIyBGaXJzdCBsb29rIGF0IENCUyBkYXRhDQoNCkFmdGVyIGhhdmluZyBhc3NlbWJsZWQgdGhlIHNvbGFyIHBhbmVsIGRhdGEsIGl0IGlzIHRpbWUgdG8gY29ubmVjdCBpdCB0byB0aGUgZGVtb2dyYXBoaWMgY2hhcmFjdGVyaXN0aWNzIG9mIHRoZSBhcmVhLg0KDQpSZWxldmFudCBwYWNrYWdlcw0KDQpgYGB7ciBldmFsID0gRkFMU0UsIG1lc3NhZ2U9RkFMU0V9DQojaW5zdGFsbC5wYWNrYWdlcygic2YiKQ0KDQpybShsaXN0PWxzKCkpDQoNCiNsaWJyYXJ5KGZ1enp5am9pbikNCmxpYnJhcnkgKGRhdGEudGFibGUpDQpsaWJyYXJ5KHRpZHl2ZXJzZSkNCmxpYnJhcnkoc2YpDQojbGlicmFyeSh0aWR5Z2VvY29kZXIpDQpgYGANCg0KTGVlZnRpamQsIGV0bmlzY2hlIGFma29tc3QsIHBlcmNlbnRhZ2UgZWlnZW5kb20sIFdPWi13YWFyZGUsIGVsZWt0cmljaXRlaXRzZ2VicnVpayBpcyBvcCBwb3N0Y29kZW5pdmVhdSBiZWtlbmQsIGR1cyBpbXBvcnRlcmVuIHdlIGRlIENCUyBnZWdldmVucyBwZXIgUEM2IHBvc3Rjb2RlLiBEaWUgemlqbiBoaWVyIHRlIGRvd25sb2FkZW46IDxodHRwczovL3d3dy5jYnMubmwvbmwtbmwvZG9zc2llci9uZWRlcmxhbmQtcmVnaW9uYWFsL2dlb2dyYWZpc2NoZS1kYXRhL2dlZ2V2ZW5zLXBlci1wb3N0Y29kZT4NCg0KYGBge3IgZXZhbCA9IEZBTFNFLCByZXN1bHRzID0gJ2hpZGUnLCBtZXNzYWdlID0gRkFMU0UsIHdhcm5pbmcgPSBGQUxTRX0NCmNic19wYzZfMjQgPC0gc3RfcmVhZChkc24gPSAiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL2Nic19wYzZfMjAyNF92MS5ncGtnIikgfD4NCiAgbXV0YXRlICh5ZWFyID0gMjAyNCkNCmNic19wYzZfMjMgPC0gc3RfcmVhZChkc24gPSAiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL2Nic19wYzZfMjAyM192Mi5ncGtnIikgfD4NCiAgbXV0YXRlICh5ZWFyID0gMjAyMykNCmNic19wYzZfMjIgPC0gc3RfcmVhZChkc24gPSAiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL2Nic19wYzZfMjAyMl92b2wuZ3BrZyIpIHw+DQogIG11dGF0ZSAoeWVhciA9IDIwMjIpDQoNCmBgYA0KDQpNZXJnZSBDQlMgZGF0YSBlbiAtOTk5NyBlbiAtOTk5NSBvcCBOQSB6ZXR0ZW4uDQoNCmBgYHtyIGV2YWw9RkFMU0V9DQpjYnNfcGM2IDwtIGJpbmRfcm93cyhjYnNfcGM2XzI0LCBjYnNfcGM2XzIzLCBjYnNfcGM2XzIyKSB8Pg0KICBhcnJhbmdlIChwb3N0Y29kZTYsIHllYXIpIHw+DQogIHJlbG9jYXRlIChwb3N0Y29kZTYsIHllYXIsIGdlb20pfD4NCiAgbXV0YXRlKGFjcm9zcyh3aGVyZShpcy5udW1lcmljKSwgfm5hX2lmKC4sIC05OTk5NykpKSB8Pg0KICBtdXRhdGUoYWNyb3NzKHdoZXJlKGlzLm51bWVyaWMpLCB+bmFfaWYoLiwgLTk5OTk1KSkpDQpgYGANCg0KRWVuIGFhbnRhbCB2YW4gZGUgc3RyYXRlbiBpbiBkZSBQViBkYXRhIGhlYmJlbiBtZWVyZGVyZSBwb3N0Y29kZXM6DQoNCmBgYHtyIGV2YWw9RkFMU0V9DQpwdiA8LSByZWFkUkRTKCIuL2RhdGEvcHZfZGF0YS5SZHMiKSB8Pg0KICBmaWx0ZXIoeWVhciA+PSAyMDIyKSB8Pg0KICBtdXRhdGUoaWQgPSByb3dfbnVtYmVyKCkpIHw+DQogIHJlbG9jYXRlKGlkKQ0KDQptZWVyZGVyZV9wb3N0Y29kZXMgPC0gcHYgfD4gDQogIG11dGF0ZShzYW1lX3BjID0gaWZfZWxzZShQT1NUQ09ERV9WQU4gPT0gUE9TVENPREVfVE9ULCAxLCAwKSkgfD4NCiAgZmlsdGVyKHNhbWVfcGMgPT0gMCkgfD4NCiAgZGlzdGluY3QoU1RSQUFUTkFBTSwgUE9TVENPREVfVkFOLCBQT1NUQ09ERV9UT1QsIC5rZWVwX2FsbCA9IFRSVUUpDQoNCmBgYA0KDQpEYWFyb20gc2VsZWN0ZXJlbiB3ZSBlZXJzdCBkZSBsb3NzZSBjYnMgcG9zdGNvZGVzIGRpZSBiaWogZGUgcHYgc3RyYXRlbiBob3Jlbg0KDQpgYGB7ciBldmFsPUZBTFNFfQ0KI3Zvb3IgZWxrZSByaWogaW4gcHYsIHNlbGVjdGVlciBkZSByaWooZW4pIGluIGNic19wYzYgZGllIHZvbGRvZW4gYWFuIGRlIHZvb3J3YWFyZGVuIGNic19wYzYkeWVhcj1wdiR5ZWFyIEVOIHB2JFBPU1RDT0RFX1ZBTiA+PSBjYnNfcGM2JHBvc3Rjb2RlNiA8PSBwdiRQT1NUQ09ERV9UT1QgdmFuIGRpZSByaWogaW4gcHYuIG1hYWsgdm9vciBkaWUgcmlqZW4gaW4gY2JzX3BjNiBlZW4ga29sb20gImlkIiBhYW4gZW4ga2VuIGRlIHdhYXJkZSB2YW4gZGUgZGVzYmV0cnJlZmVuZGUgcHYkaWQgdG9lLiANCg0KY2JzX3BjNiB8Pg0KICBpbm5lcl9qb2luKA0KICAgIHB2LCANCiAgICBieSA9IGpvaW5fYnkoDQogICAgICB5ZWFyID09IHllYXIsDQogICAgICBwb3N0Y29kZTYgPj0gUE9TVENPREVfVkFOLA0KICAgICAgcG9zdGNvZGU2IDw9IFBPU1RDT0RFX1RPVA0KICAgICkNCiAgKQ0KDQoNCiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjDQojc2V0RFQocHYpDQojc2V0RFQoY2JzX3BjNikNCg0KI3Jlc3VsdGFhdCA8LSBjYnNfcGM2W3B2LCANCiAjICAgICAgICAgICAgICAgICAgICBvbiA9IC4oeWVhciA9PSB5ZWFyLCANCiAgIyAgICAgICAgICAgICAgICAgICAgICAgICAgcG9zdGNvZGU2ID49IFBPU1RDT0RFX1ZBTiwgDQogIyAgICAgICAgICAgICAgICAgICAgICAgICAgIHBvc3Rjb2RlNiA8PSBQT1NUQ09ERV9UT1QpLCANCiAgIyAgICAgICAgICAgICAgICAgICBub21hdGNoID0gTlVMTF0NCg0KDQoNCg0KYGBgDQoNCkRhbiBrdW5uZW4gd2UgdmVydm9sZ2VucyBkZSBDQlMgZGF0YSBtZXJnZW4gbWV0IGRlIFBWIGRhdGE6DQoNCmBgYHtyfQ0KDQojZGZfbWVyZ2luZyA8LSBsZWZ0X2pvaW4ocHYsIGNic19wYzYsIGJ5ID0gYygnUE9TVENPREVfVkFOJz0ncG9zdGNvZGU2JywgJ3llYXInPSd5ZWFyJykpDQoNCmBgYA0KDQpJbmtvbWVuIGVuIHN0ZWRlbGlqa2hlaWQgaXMgYWxsZWVuIGJlc2NoaWtiYWFyIHBlciA1MDBtIHggNTAwbSB2aWVya2FudGVuLiBEZSBkYXRhIGRhYXJ2YW4gaXMgaGllciB0ZSBkb3dubG9hZGVuOiA8aHR0cHM6Ly93d3cuY2JzLm5sL25sLW5sL2Rvc3NpZXIvbmVkZXJsYW5kLXJlZ2lvbmFhbC9nZW9ncmFmaXNjaGUtZGF0YS9rYWFydC12YW4tNTAwLW1ldGVyLWJpai01MDAtbWV0ZXItbWV0LXN0YXRpc3RpZWtlbj4NCg0KYGBge3IgZXZhbD1GQUxTRX0NCmNic181MDBfMjQgPC0gc3RfcmVhZChkc24gPSAiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzL2Nic192azUwMF8yMDI0X3YxLmdwa2ciKSB8Pg0KICBtdXRhdGUgKHllYXIgPSAyMDI0KQ0KY2JzXzUwMF8yMyA8LSBzdF9yZWFkKGRzbiA9ICJDOi9Vc2Vycy9rYWxsZS9Eb3dubG9hZHMvMjAyNS1jYnNfdms1MDBfMjAyM192Mi9jYnNfdms1MDBfMjAyM192Mi5ncGtnIikgfD4NCiAgbXV0YXRlICh5ZWFyID0gMjAyMykNCmNic181MDBfMjIgPC0gc3RfcmVhZChkc24gPSAiQzovVXNlcnMva2FsbGUvRG93bmxvYWRzLzIwMjUtY2JzX3ZrNTAwXzIwMjJfdm9sL2Nic192azUwMF8yMDIyX3ZvbC5ncGtnIikgfD4NCiAgbXV0YXRlICh5ZWFyID0gMjAyMikNCg0KY2JzXzUwMCA8LSBiaW5kX3Jvd3MoY2JzXzUwMF8yNCwgY2JzXzUwMF8yMywgY2JzXzUwMF8yMikNCiAgDQoNCmBgYA0KDQpOdSBtb2V0ZW4gd2UgZGUgY29vcmRpbmF0ZW4gdmFuIGRlIGNlbnRyb2lkZSB2YW4gZWxrZSBwb3N0Y29kZSBhY2h0ZXJoYWxlbiBlbiBrb3BwZWxlbiBhYW4gZWVuIDUwMHg1MDAgdmllcmthbnQuDQoNCmBgYHtyfQ0KDQoNCg0KYGBgDQoNClZlcnZvbGdlbnMga3VubmVuIHdlIGRpdCBwdW50IGtvcHBlbGVuIGFhbiBlZW4gNTAweDUwMCB2aWVya2FudC4NCg0KYGBge3J9DQoNCg0KYGBgDQoNCkFuYWx5c2U6IHNvY2lhbCBuZXR3b3JrIGFuYWx5emUgbWV0IGVlbiB3ZWlnaHRlZCBzb2NpYWwgbmV0d29yayB3YWFyYmlqIGhldCBnZXdpY2h0IGRlIGFmc3RhbmQgaXMgdHVzc2VuIGRlIGNlbnRyb2lkZXMgdmFuIHR3ZWUgc3RyYXRlbj8NCg==</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIkpvdXJuYWwgMiINCmF1dGhvcjogIkthbGxlIFN0b2ZmZXJzIg0KZGF0ZTogIjIwMjYtMDMtMDQiDQpvdXRwdXQ6IGh0bWxfZG9jdW1lbnQNCi0tLQ0KDQpMYXN0IGNvbXBpbGVkIG9uIGByIGZvcm1hdChTeXMudGltZSgpLCAnJUIsICVZJylgDQoNCjxicj4NCg0KLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tDQoNCiMjIEZpcnN0IGxvb2sgYXQgQ0JTIGRhdGENCg0KQWZ0ZXIgaGF2aW5nIGFzc2VtYmxlZCB0aGUgc29sYXIgcGFuZWwgZGF0YSwgaXQgaXMgdGltZSB0byBjb25uZWN0IGl0IHRvIHRoZSBkZW1vZ3JhcGhpYyBjaGFyYWN0ZXJpc3RpY3Mgb2YgdGhlIGFyZWEuDQoNCkZpcnN0LCB3ZSBsb2FkIHRoZSByZWxldmFudCBwYWNrYWdlcw0KDQpgYGB7ciBldmFsID0gRkFMU0UsIG1lc3NhZ2U9RkFMU0V9DQpybShsaXN0PWxzKCkpDQoNCmxpYnJhcnkodGlkeXZlcnNlKQ0KbGlicmFyeShzZikNCmBgYA0KDQpBZ2UsIGV0aG5pYyBiYWNrZ3JvdW5kLCBwZXJjZW50YWdlIG9mIGhvbWUgb3duZXJzaGlwLCBhdmVyYWdlIHByb3BlcnR5IHZhbHVlIGFuZCBlbGVjdHJpY2l0eSB1c2FnZSBpcyBrbm93biBhdCB0aGUgcG9zdGFsIGNvZGUgbGV2ZWwsIHNvIHdlIGltcG9ydCB0aGUgQ0JTIGRhdGEgcGVyIFBDNiBwb3N0YWwgY29kZS4gVGhlc2UgZGF0YSBjYW4gYmUgZG93bmxvYWRlZCBoZXJlOiA8aHR0cHM6Ly93d3cuY2JzLm5sL25sLW5sL2Rvc3NpZXIvbmVkZXJsYW5kLXJlZ2lvbmFhbC9nZW9ncmFmaXNjaGUtZGF0YS9nZWdldmVucy1wZXItcG9zdGNvZGU+DQoNCmBgYHtyIGV2YWwgPSBGQUxTRSwgcmVzdWx0cyA9ICdoaWRlJywgbWVzc2FnZSA9IEZBTFNFLCB3YXJuaW5nID0gRkFMU0V9DQojbG9hZCBkYXRhDQpjYnNfcGM2XzI0IDwtIHN0X3JlYWQoZHNuID0gIkM6L1VzZXJzL2thbGxlL0Rvd25sb2Fkcy9jYnNfcGM2XzIwMjRfdjEuZ3BrZyIpIHw+DQogIG11dGF0ZSAoeWVhciA9IDIwMjQpDQpjYnNfcGM2XzIzIDwtIHN0X3JlYWQoZHNuID0gIkM6L1VzZXJzL2thbGxlL0Rvd25sb2Fkcy9jYnNfcGM2XzIwMjNfdjIuZ3BrZyIpIHw+DQogIG11dGF0ZSAoeWVhciA9IDIwMjMpDQpjYnNfcGM2XzIyIDwtIHN0X3JlYWQoZHNuID0gIkM6L1VzZXJzL2thbGxlL0Rvd25sb2Fkcy9jYnNfcGM2XzIwMjJfdm9sLmdwa2ciKSB8Pg0KICBtdXRhdGUgKHllYXIgPSAyMDIyKQ0KY2JzX3BjNl8yMSA8LSBzdF9yZWFkKGRzbiA9ICJDOi9Vc2Vycy9rYWxsZS9Eb3dubG9hZHMvY2JzX3BjNl8yMDIxX3ZvbC5ncGtnIikgfD4NCiAgbXV0YXRlICh5ZWFyID0gMjAyMSkNCg0KI2RhdGEgZnJvbSAyMDIwIGFuZCAyMDE5IGlzIHVuYXZhaWxhYmxlIGF0IHRoaXMgbW9tZW50IGJ1dCB3aWxsIGJlIGF2YWlsYWJsZSBiZWZvcmUgdGhlIDFzdCBvZiBNYXkNCg0KY2JzX3BjNl8xOCA8LSBzdF9yZWFkKGRzbiA9ICJDOi9Vc2Vycy9rYWxsZS9Eb3dubG9hZHMvQ0JTLVBDNi0yMDE4LXYzL0NCU19QQzZfMjAxOF92My5zaHAiKSB8PiAgICBtdXRhdGUgKHllYXIgPSAyMDE4KQ0KY2JzX3BjNl8xNyA8LSBzdF9yZWFkKGRzbiA9ICJDOi9Vc2Vycy9rYWxsZS9Eb3dubG9hZHMvQ0JTLVBDNi0yMDE3LXYzL0NCU19QQzZfMjAxN192My5zaHAiKSB8Pg0KICBtdXRhdGUgKHllYXIgPSAyMDE3KQ0KY2JzX3BjNl8xNiA8LSBzdF9yZWFkKGRzbiA9ICJDOi9Vc2Vycy9rYWxsZS9Eb3dubG9hZHMvQ0JTLVBDNi0yMDE2LXYyL0NCU19QQzZfMjAxNl92Mi5zaHAiKSB8Pg0KICBtdXRhdGUgKHllYXIgPSAyMDE2KQ0KY2JzX3BjNl8xNSA8LSBzdF9yZWFkKGRzbiA9ICJDOi9Vc2Vycy9rYWxsZS9Eb3dubG9hZHMvQ0JTLVBDNi0yMDE1LXYyL0NCU19QQzZfMjAxNV92Mi5zaHAiKSB8Pg0KICBtdXRhdGUgKHllYXIgPSAyMDE1KQ0KDQoNCiNtZXJnZSBhbmQgTkFzDQpjYnNfcGM2IDwtIGJpbmRfcm93cyhjYnNfcGM2XzI0LCBjYnNfcGM2XzIzLCBjYnNfcGM2XzIyKSB8Pg0KICBhcnJhbmdlIChwb3N0Y29kZTYsIHllYXIpIHw+DQogIHJlbG9jYXRlIChwb3N0Y29kZTYsIHllYXIsIGdlb20pfD4NCiAgbXV0YXRlKGFjcm9zcyh3aGVyZShpcy5udW1lcmljKSwgfm5hX2lmKC4sIC05OTk5NykpKSB8Pg0KICBtdXRhdGUoYWNyb3NzKHdoZXJlKGlzLm51bWVyaWMpLCB+bmFfaWYoLiwgLTk5OTk1KSkpDQpgYGANCg0KU29tZSBzdHJlZXRzIGluIHRoZSBQViBkYXRhIGhhdmUgbXVsdGlwbGUgcG9zdGFsIGNvZGVzOg0KDQpgYGB7ciBldmFsPUZBTFNFfQ0KI2xvYWQgcHYgZGF0YSBhbmQgYWRkIGlkDQpwdiA8LSByZWFkUkRTKCIuL2RhdGEvcHZfZGF0YS5SZHMiKSB8Pg0KICBmaWx0ZXIoeWVhciA+PSAyMDIyKSB8Pg0KICBtdXRhdGUoaWQgPSByb3dfbnVtYmVyKCkpIHw+DQogIHJlbG9jYXRlKGlkKQ0KDQojY2hlY2sgZm9yIG11bHRpcGxlIHBvc3RhbCBjb2RlcyBwZXIgc3RyZWV0DQptZWVyZGVyZV9wb3N0Y29kZXMgPC0gcHYgfD4gDQogIG11dGF0ZShzYW1lX3BjID0gaWZfZWxzZShQT1NUQ09ERV9WQU4gPT0gUE9TVENPREVfVE9ULCAxLCAwKSkgfD4NCiAgZmlsdGVyKHNhbWVfcGMgPT0gMCkgfD4NCiAgZGlzdGluY3QoU1RSQUFUTkFBTSwgUE9TVENPREVfVkFOLCBQT1NUQ09ERV9UT1QsIC5rZWVwX2FsbCA9IFRSVUUpDQoNCmBgYA0KDQpXZSBzZWxlY3QgdGhlIENCUyBwb3N0YWwgY29kZXMgd2hpY2ggbWF0Y2ggdGhlIHN0cmVldHMgZnJvbSB0aGUgUFYgZGF0YS4NCg0KYGBge3IgZXZhbD1GQUxTRSwgcmVzdWx0cyA9ICdoaWRlJ30NCmNic19wYzZfc2VsIDwtIGNic19wYzYgfD4NCiAgaW5uZXJfam9pbigNCiAgICBwdiwgDQogICAgYnkgPSBqb2luX2J5KA0KICAgICAgeWVhciA9PSB5ZWFyLA0KICAgICAgcG9zdGNvZGU2ID49IFBPU1RDT0RFX1ZBTiwNCiAgICAgIHBvc3Rjb2RlNiA8PSBQT1NUQ09ERV9UT1QNCiAgICApDQogICkgfD4NCiAgcmVsb2NhdGUocG9zdGNvZGU2LCBnZW9tLCB5ZWFyLCBpZCwgUE9TVENPREVfVkFOLCBQT1NUQ09ERV9UT1QsIFNUUkFBVE5BQU0sIFguTGV2ZXJpbmdzcmljaHRpbmcpDQoNCmBgYA0KDQpOb3cgd2UgY29sbGFwc2UgdGhlIG11bHRpcGxlIHJvd3MgaW50byBhIHNpbmdsZSByb3cgcGVyIHN0cmVldCBpbiB0aGUgUFYgZGF0YS4NCg0KYGBge3IgZXZhbD1GQUxTRX0NCmRmIDwtIGNic19wYzZfc2VsIHw+DQogIGdyb3VwX2J5KGlkKSB8Pg0KICBzdW1tYXJpc2UoDQogICAgDQogICAgZ2VvbWV0cnkgPSBzZjo6c3RfdW5pb24oZ2VvbSksDQogICAgDQogICAgYWNyb3NzKA0KICAgICAgYygNCiAgICAgICAgUE9TVENPREVfVkFOLCANCiAgICAgICAgUE9TVENPREVfVE9ULCANCiAgICAgICAgU1RSQUFUTkFBTSwgDQogICAgICAgIHllYXIsDQogICAgICAgIFguTGV2ZXJpbmdzcmljaHRpbmcNCiAgICAgICAgKSwgDQogICAgICAgICAgIGZpcnN0KSwNCiAgICANCiAgICBhY3Jvc3MoDQogICAgICBjKA0KICAgICAgICBwZXJjZW50YWdlX2dlYl9uZWRlcmxhbmRfaGVya29tc3RfbmVkZXJsYW5kLA0KICAgICAgICBwZXJjZW50YWdlX2dlYl9uZWRlcmxhbmRfaGVya29tc3Rfb3ZlcmlnX2V1cm9wYSwNCiAgICAgICAgcGVyY2VudGFnZV9nZWJfbmVkZXJsYW5kX2hlcmtvbXN0X2J1aXRlbl9ldXJvcGEsDQogICAgICAgIHBlcmNlbnRhZ2VfZ2ViX2J1aXRlbl9uZWRlcmxhbmRfaGVya29tc3RfZXVyb3BhLA0KICAgICAgICBwZXJjZW50YWdlX2dlYl9idWl0ZW5fbmVkZXJsYW5kX2hlcmttc3RfYnVpdGVuX2V1cm9wYQ0KICAgICAgKSwNCiAgICAgIH4gd2VpZ2h0ZWQubWVhbigueCwgYWFudGFsX2lud29uZXJzLCBuYS5ybSA9IFRSVUUpDQogICAgKSwNCiAgICANCiAgICBnZW1pZGRlbGRlX2h1aXNob3VkZW5zZ3Jvb3R0ZSA9IA0KICAgICAgd2VpZ2h0ZWQubWVhbihnZW1pZGRlbGRlX2h1aXNob3VkZW5zZ3Jvb3R0ZSwNCiAgICAgICAgICAgICAgICAgICAgYWFudGFsX3BhcnRfaHVpc2hvdWRlbnMsIA0KICAgICAgICAgICAgICAgICAgICBuYS5ybSA9IFRSVUUpLA0KICAgIA0KICAgIGFjcm9zcygNCiAgICAgIGMoDQogICAgICAgIHBlcmNlbnRhZ2Vfa29vcHdvbmluZ2VuLCANCiAgICAgICAgcGVyY2VudGFnZV9odXVyd29uaW5nZW4sIA0KICAgICAgICBnZW1pZGRlbGRlX3dvel93YWFyZGVfd29uaW5nLCANCiAgICAgICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nDQogICAgICAgICksIA0KICAgICAgICAgICB+d2VpZ2h0ZWQubWVhbigueCwgYWFudGFsX3dvbmluZ2VuLCBuYS5ybSA9IFRSVUUpDQogICAgICApLA0KICAgIA0KICAgIGFjcm9zcygNCiAgICAgIGMoDQogICAgICAgIGFhbnRhbF9pbndvbmVycywNCiAgICAgICAgYWFudGFsX21hbm5lbiwNCiAgICAgICAgYWFudGFsX3Zyb3V3ZW4sDQogICAgICAgIGFhbnRhbF9pbndvbmVyc18wX3RvdF8xNV9qYWFyLA0KICAgICAgICBhYW50YWxfaW53b25lcnNfMTVfdG90XzI1X2phYXIsDQogICAgICAgIGFhbnRhbF9pbndvbmVyc18yNV90b3RfNDVfamFhciwNCiAgICAgICAgYWFudGFsX2lud29uZXJzXzQ1X3RvdF82NV9qYWFyLA0KICAgICAgICBhYW50YWxfaW53b25lcnNfNjVfamFhcl9lbl9vdWRlciwNCiAgICAgICAgYWFudGFsX3BhcnRfaHVpc2hvdWRlbnMsDQogICAgICAgIGFhbnRhbF93b25pbmdlbiwNCiAgICAgICAgYWFudGFsX2h1dXJ3b25pbmdlbl9pbl9iZXppdF93b25pbmdjb3Jwb3JhdGllcywNCiAgICAgICAgYWFudGFsX25pZXRfYmV3b29uZGVfd29uaW5nZW4sDQogICAgICAgIGFhbnRhbF9wZXJzb25lbl9tZXRfdWl0a2VyaW5nX29uZGVyX2Fvd2xmdA0KICAgICAgKSwNCiAgICAgIH4gc3VtKC54LCBuYS5ybSA9IFRSVUUpDQogICAgICApDQogICkgfD4NCiAgcmVuYW1lKHBvc3Rjb2RlX3ZhbiA9IFBPU1RDT0RFX1ZBTiwNCiAgICAgICAgIHBvc3Rjb2RlX3RvdCA9IFBPU1RDT0RFX1RPVCwNCiAgICAgICAgIHN0cmFhdG5hYW0gPSBTVFJBQVROQUFNLA0KICAgICAgICAgbGV2ZXJpbmdzcmljaHRpbmcgPSBYLkxldmVyaW5nc3JpY2h0aW5nKQ0KYGBgDQoNCkluY29tZSBhbmQgdXJiYW5pdHkvZGVuc2l0eSBhcmUgb25seSBhdmFpbGFibGUgcGVyIDUwMG0geCA1MDBtIHNxdWFyZS4gVGhpcyBkYXRhIGNhbiBiZSBkb3dubG9hZGVkIGhlcmU6IFtodHRwczovL3d3dy5jYnMubmwvbmwtbmwvZG9zc2llci9uZWRlcmxhbmQtcmVnaW9uYWFsL2dlb2dyYWZpc2NoZS1kYXRhL2thYXJ0LXZhbi01MDAtbWV0ZXItYmlqLTUwMC1tZXRlci1tZXQtc3RhdGlzdGlla2VuXSgjMCl7LnVyaX0NCg0KYGBge3IgZXZhbD1GQUxTRSwgbWVzc2FnZSA9IEZBTFNFfQ0KY2JzXzUwMF8yNCA8LSBzdF9yZWFkKGRzbiA9ICJDOi9Vc2Vycy9rYWxsZS9Eb3dubG9hZHMvY2JzX3ZrNTAwXzIwMjRfdjEuZ3BrZyIpIHw+DQogIG11dGF0ZSAoeWVhciA9IDIwMjQpDQpjYnNfNTAwXzIzIDwtIHN0X3JlYWQoZHNuID0gIkM6L1VzZXJzL2thbGxlL0Rvd25sb2Fkcy8yMDI1LWNic192azUwMF8yMDIzX3YyL2Nic192azUwMF8yMDIzX3YyLmdwa2ciKSB8Pg0KICBtdXRhdGUgKHllYXIgPSAyMDIzKQ0KY2JzXzUwMF8yMiA8LSBzdF9yZWFkKGRzbiA9ICJDOi9Vc2Vycy9rYWxsZS9Eb3dubG9hZHMvMjAyNS1jYnNfdms1MDBfMjAyMl92b2wvY2JzX3ZrNTAwXzIwMjJfdm9sLmdwa2ciKSB8Pg0KICBtdXRhdGUgKHllYXIgPSAyMDIyKQ0KDQpjYnNfNTAwIDwtIGJpbmRfcm93cyhjYnNfNTAwXzI0LCBjYnNfNTAwXzIzLCBjYnNfNTAwXzIyKSB8Pg0KICANCiAgc2VsZWN0KGNyczI4OTkycmVzNTAwbSwgZ2VtaWRkZWxkX2lua29tZW5faHVpc2hvdWRlbiwgcGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbiwgcGVyY2VudGFnZV9ob29nX2lua29tZW5faHVpc2hvdWRlbiwgb21nZXZpbmdzYWRyZXNzZW5kaWNodGhlaWQsIHN0ZWRlbGlqa2hlaWQsIGdlb20sIHllYXIpfD4NCiAgDQogIHJlbG9jYXRlKGNyczI4OTkycmVzNTAwbSwgZ2VvbSwgeWVhciwgZ2VtaWRkZWxkX2lua29tZW5faHVpc2hvdWRlbiwgcGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbiwgcGVyY2VudGFnZV9ob29nX2lua29tZW5faHVpc2hvdWRlbiwgb21nZXZpbmdzYWRyZXNzZW5kaWNodGhlaWQsIHN0ZWRlbGlqa2hlaWQpIHw+DQogIA0KICBtdXRhdGUoYWNyb3NzKHdoZXJlKGlzLm51bWVyaWMpLCB+bmFfaWYoLiwgLTk5OTk3KSkpIHw+DQogIG11dGF0ZShhY3Jvc3Mod2hlcmUoaXMubnVtZXJpYyksIH5uYV9pZiguLCAtOTk5OTUpKSkNCmBgYA0KDQpOb3cgd2Ugam9pbiB0aGUgc3F1YXJlcyB3aXRoIHRoZSBwb3N0YWwgY29kZSBhcmVhcyBiYXNlZCBvbiB0aGUgbGFyZ2VzdCBvdmVybGFwcGluZyBhcmVhLg0KDQpgYGB7ciBldmFsID1GQUxTRX0NCiNtYXRjaCB0aGUgc3F1YXJlcyBiZWxvbmdpbmcgdG8gdGhlIHBvc3RhbCBjb2RlIGFyZWEgYW5kIGtlZXAgb25seSB0aGUgc3F1YXJlIGlkDQpkZiA8LSBkZiB8Pg0KICBzdF9qb2luKGNic181MDAsam9pbiA9IHN0X2ludGVyc2VjdHMsIGxlZnQgPSBULCBsYXJnZXN0ID0gVCkgfD4NCiAgc2VsZWN0KC1jKHllYXIueSwgZ2VtaWRkZWxkX2lua29tZW5faHVpc2hvdWRlbiwgcGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbiwgcGVyY2VudGFnZV9ob29nX2lua29tZW5faHVpc2hvdWRlbiwgb21nZXZpbmdzYWRyZXNzZW5kaWNodGhlaWQsIHN0ZWRlbGlqa2hlaWQpKQ0KDQojbWF0Y2ggdGhlIHNxdWFyZSBhdHRyaWJ1dGVzIGluIHRoZSByaWdodCB5ZWFyDQpkZiA8LSBkZiB8Pg0KICBsZWZ0X2pvaW4gKHN0X2Ryb3BfZ2VvbWV0cnkoY2JzXzUwMCksIGJ5ID0gYygiY3JzMjg5OTJyZXM1MDBtIiwgInllYXIueCIgPSAieWVhciIpKSB8Pg0KICByZW5hbWUoeWVhciA9IHllYXIueCkNCg0KYGBgDQoNCmBgYHtyIGV2YWw9RkFMU0V9DQpkZiA8LSBkZiB8PiANCiAgbXV0YXRlKGFjcm9zcyh3aGVyZShpcy5udW1lcmljKSwgfm5hX2lmKC4sIE5hTikpKQ0KYGBgDQoNClNhdmluZyB0aGUgZGF0YSENCg0KYGBge3IgZXZhbD1GQUxTRX0NCnNhdmVSRFMoZGYsIGZpbGUgPSAiLi9kYXRhL21lcmdlZF9kYXRhLlJkcyIpDQoNCmBgYA0K</div>
 
 
 </div>
