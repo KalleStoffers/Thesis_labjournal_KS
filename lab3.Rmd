@@ -1,0 +1,20 @@
+---
+title: "Journal 3"
+author: "Kalle Stoffers"
+date: "2026-03-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exploring the data
+
+Relevant packages
+
+```{r}
+
+```
+
+Analyze: social network analyze met een weighted social network waarbij het gewicht de afstand is tussen de centroides van twee straten?
