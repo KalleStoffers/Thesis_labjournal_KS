@@ -394,12 +394,326 @@ div.tocify {
 <div id="exploring-the-data" class="section level2" number="1">
 <h2><span class="header-section-number">1</span> Exploring the data</h2>
 <p>Relevant packages</p>
-<p>Analyze: social network analyze met een weighted social network
-waarbij het gewicht de afstand is tussen de centroides van twee
-straten?</p>
+<pre class="r"><code>rm(list=ls())
+
+library(tidyverse)
+library(sf)</code></pre>
+<pre><code>## Warning: package &#39;sf&#39; was built under R version 4.5.2</code></pre>
+<pre><code>## Linking to GEOS 3.13.1, GDAL 3.11.4, PROJ 9.7.0; sf_use_s2() is TRUE</code></pre>
+<pre class="r"><code>library(tmap)</code></pre>
+<pre><code>## Warning: package &#39;tmap&#39; was built under R version 4.5.2</code></pre>
+<pre class="r"><code>library(spdep)</code></pre>
+<pre><code>## Warning: package &#39;spdep&#39; was built under R version 4.5.2</code></pre>
+<pre><code>## Loading required package: spData</code></pre>
+<pre><code>## Warning: package &#39;spData&#39; was built under R version 4.5.2</code></pre>
+<pre><code>## To access larger datasets in this package, install the spDataLarge
+## package with: `install.packages(&#39;spDataLarge&#39;,
+## repos=&#39;https://nowosad.github.io/drat/&#39;, type=&#39;source&#39;)`</code></pre>
+<pre class="r"><code>df &lt;- st_read(dsn = &quot;./data/merged_data.gpkg&quot;)</code></pre>
+<pre><code>## Reading layer `merged_data&#39; from data source 
+##   `C:\Users\kalle\OneDrive\Documenten\REMA\Thesis\labjournal_thesis_KS\labjournal_thesis_KS\data\merged_data.gpkg&#39; 
+##   using driver `GPKG&#39;
+## Simple feature collection with 20163 features and 38 fields
+## Geometry type: MULTIPOLYGON
+## Dimension:     XY
+## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
+## Projected CRS: Amersfoort / RD New</code></pre>
+<p>Looking at the solar panel data again</p>
+<pre class="r"><code>#leveringsrichting from character to numeric
+class(df$leveringsrichting)</code></pre>
+<pre><code>## [1] &quot;character&quot;</code></pre>
+<pre class="r"><code>df$leveringsrichting &lt;- as.numeric(gsub(&quot;,&quot;, &quot;.&quot;, df$leveringsrichting))
+
+#reverse 
+df&lt;- df|&gt; mutate(teruglevering = 100 - leveringsrichting)
+summary(df$teruglevering)</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##    0.00    0.00    6.67   15.32   23.81  100.00</code></pre>
+<pre class="r"><code>hist(df$teruglevering)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<pre class="r"><code>df %&gt;% filter(teruglevering != 0) %&gt;% nrow()</code></pre>
+<pre><code>## [1] 12819</code></pre>
+<pre class="r"><code>#dichotomous variable
+df &lt;- df |&gt; mutate (teruglevering_d = if_else(teruglevering&gt;0, 1, 0))
+summary(df$teruglevering_d)</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##  0.0000  0.0000  1.0000  0.6358  1.0000  1.0000</code></pre>
+<pre class="r"><code>#plots over time
+df |&gt;
+  group_by(year) |&gt;
+  summarise(yearly_avg = mean(teruglevering, na.rm = TRUE)) |&gt;
+  ggplot(aes(x = year, y = yearly_avg)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 2))+
+  theme_minimal()</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-3-2.png" width="672" /></p>
+<pre class="r"><code>#dichotomous
+df |&gt;
+  group_by(year) |&gt;
+  summarise(yearly_avg = mean(teruglevering_d, na.rm = TRUE) * 100) |&gt;
+  ggplot(aes(x = year, y = yearly_avg)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 2))+
+  theme_minimal()</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-3-3.png" width="672" /></p>
+<p>Let’s plot the data on a map using ggplot.</p>
+<pre class="r"><code>#plot the data
+df |&gt;
+  filter(year == 2024) |&gt;
+  ggplot(
+    aes(fill = teruglevering)
+  ) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c(option = &quot;plasma&quot;, name = &quot;Energy feed-in&quot;) +
+  theme_minimal()</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>Now we have only mapped the data for a single year. Now, we create a
+map of all the years using tmap:</p>
+<pre class="r"><code>tmap_mode(&quot;plot&quot;)</code></pre>
+<pre><code>## ℹ tmap modes &quot;plot&quot; - &quot;view&quot;
+## ℹ toggle with `tmap::ttm()`</code></pre>
+<pre class="r"><code>tm_shape(df) +
+  tm_fill(&quot;teruglevering&quot;) +
+  tm_facets(by = &quot;year&quot;)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p>Looking at relevant variables. High levels of missingness in the
+data! Maybe I can use spatial + temporal interpolation to impute the
+data?</p>
+<pre class="r"><code>## ethniticity
+summary(df$percentage_geb_nederland_herkomst_nederland) #565 NAs</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
+##   5.455  80.000  90.000  84.363  90.000 100.000     565</code></pre>
+<pre class="r"><code>sum(
+    is.na(df$percentage_geb_nederland_herkomst_nederland) &amp; 
+    is.na(df$percentage_geb_nederland_herkomst_overig_europa) &amp; 
+    is.na(df$percentage_geb_nederland_herkomst_buiten_europa) &amp; 
+    is.na(df$percentage_geb_buiten_nederland_herkomst_europa) &amp;
+    is.na(df$percentage_geb_buiten_nederland_herkmst_buiten_europa) &amp;
+    is.na(df$percentage_westerse_migr_achtergr) &amp;
+    is.na(df$percentage_niet_westerse_migr_achtergr)  
+    ) #533 truly missing, 32 likely value close to 0. </code></pre>
+<pre><code>## [1] 533</code></pre>
+<pre class="r"><code>hist(df$percentage_geb_nederland_herkomst_nederland)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<pre class="r"><code>## home ownership
+summary(df$percentage_koopwoningen) #4836 NAs</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
+##    10.0    80.0    90.0    83.7   100.0   100.0    4836</code></pre>
+<pre class="r"><code>df |&gt; filter(is.na(percentage_koopwoningen) &amp; is.na(percentage_huurwoningen)) |&gt; summarise(count = n()) #3958 of those have missing value on both rented and owned homes</code></pre>
+<pre><code>## Simple feature collection with 1 feature and 1 field
+## Geometry type: MULTIPOLYGON
+## Dimension:     XY
+## Bounding box:  xmin: 68730.71 ymin: 437747.8 xmax: 84877.15 ymax: 450662.6
+## Projected CRS: Amersfoort / RD New
+##   count                           geom
+## 1  3958 MULTIPOLYGON (((70500.13 44...</code></pre>
+<pre class="r"><code>df |&gt; filter(is.na(percentage_koopwoningen) &amp; !is.na(percentage_huurwoningen)) |&gt; summarise(count = n()) #878 streets likely have close to 0 home ownership</code></pre>
+<pre><code>## Simple feature collection with 1 feature and 1 field
+## Geometry type: MULTIPOLYGON
+## Dimension:     XY
+## Bounding box:  xmin: 70538.6 ymin: 438776.5 xmax: 83276.29 ymax: 450259.5
+## Projected CRS: Amersfoort / RD New
+##   count                           geom
+## 1   878 MULTIPOLYGON (((70560.21 44...</code></pre>
+<pre class="r"><code>df |&gt; 
+  group_by(year) |&gt; 
+  summarise(missing_count = sum(is.na(percentage_koopwoningen))) # about 600 NAs in every year</code></pre>
+<pre><code>## Simple feature collection with 8 features and 2 fields
+## Geometry type: MULTIPOLYGON
+## Dimension:     XY
+## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
+## Projected CRS: Amersfoort / RD New
+## # A tibble: 8 × 3
+##    year missing_count                                                       geom
+##   &lt;dbl&gt;         &lt;int&gt;                                         &lt;MULTIPOLYGON [m]&gt;
+## 1  2015           602 (((67757 443783, 67716 443803, 67675 443824, 67614 443854…
+## 2  2016           598 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
+## 3  2017           593 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
+## 4  2018           626 (((65359.35 444766.2, 65065.21 444883.1, 65041.03 444892.…
+## 5  2021           599 (((70474.74 442709, 70479.05 442709.9, 70566.63 442708.8,…
+## 6  2022           597 (((65751.47 443924.7, 65101.49 444222.6, 65225.73 444465.…
+## 7  2023           605 (((66528.16 443833.8, 66261.06 443820.9, 65860.24 443874.…
+## 8  2024           616 (((69860.34 442970, 69859.23 442986.6, 69861.07 442997.3,…</code></pre>
+<pre class="r"><code>hist(df$percentage_koopwoningen)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-6-2.png" width="672" /></p>
+<pre class="r"><code>## property value
+summary(df$gemiddelde_woz_waarde_woning) #6219 NAs</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
+##    58.0   224.0   298.0   325.5   391.0  1374.0    6219</code></pre>
+<pre class="r"><code>df |&gt; 
+  group_by(year) |&gt; 
+  summarise(missing_count = sum(is.na(gemiddelde_woz_waarde_woning))) #no data in 2015 and 2024</code></pre>
+<pre><code>## Simple feature collection with 8 features and 2 fields
+## Geometry type: MULTIPOLYGON
+## Dimension:     XY
+## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
+## Projected CRS: Amersfoort / RD New
+## # A tibble: 8 × 3
+##    year missing_count                                                       geom
+##   &lt;dbl&gt;         &lt;int&gt;                                         &lt;MULTIPOLYGON [m]&gt;
+## 1  2015          2422 (((67757 443783, 67716 443803, 67675 443824, 67614 443854…
+## 2  2016           128 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
+## 3  2017           252 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
+## 4  2018           310 (((65359.35 444766.2, 65065.21 444883.1, 65041.03 444892.…
+## 5  2021           301 (((70474.74 442709, 70479.05 442709.9, 70566.63 442708.8,…
+## 6  2022            91 (((65751.47 443924.7, 65101.49 444222.6, 65225.73 444465.…
+## 7  2023            90 (((66528.16 443833.8, 66261.06 443820.9, 65860.24 443874.…
+## 8  2024          2625 (((69860.34 442970, 69859.23 442986.6, 69861.07 442997.3,…</code></pre>
+<pre class="r"><code>hist(df$gemiddelde_woz_waarde_woning)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-6-3.png" width="672" /></p>
+<pre class="r"><code>## electricity use
+summary(df$gemiddeld_elektriciteitsverbruik_woning) #3476 NAs</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
+##     810    2440    2990    3095    3650    7780    3476</code></pre>
+<pre class="r"><code>df |&gt; 
+  group_by(year) |&gt; 
+  summarise(missing_count = sum(is.na(gemiddeld_elektriciteitsverbruik_woning))) #no data in 2024</code></pre>
+<pre><code>## Simple feature collection with 8 features and 2 fields
+## Geometry type: MULTIPOLYGON
+## Dimension:     XY
+## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
+## Projected CRS: Amersfoort / RD New
+## # A tibble: 8 × 3
+##    year missing_count                                                       geom
+##   &lt;dbl&gt;         &lt;int&gt;                                         &lt;MULTIPOLYGON [m]&gt;
+## 1  2015           136 (((67757 443783, 67716 443803, 67675 443824, 67614 443854…
+## 2  2016           128 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
+## 3  2017           127 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
+## 4  2018           158 (((65359.35 444766.2, 65065.21 444883.1, 65041.03 444892.…
+## 5  2021            92 (((70474.74 442709, 70479.05 442709.9, 70566.63 442708.8,…
+## 6  2022           103 (((65751.47 443924.7, 65101.49 444222.6, 65225.73 444465.…
+## 7  2023           107 (((66528.16 443833.8, 66261.06 443820.9, 65860.24 443874.…
+## 8  2024          2625 (((69860.34 442970, 69859.23 442986.6, 69861.07 442997.3,…</code></pre>
+<pre class="r"><code>hist(df$gemiddeld_elektriciteitsverbruik_woning)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-6-4.png" width="672" /></p>
+<pre class="r"><code>## age
+sum(is.na(df$aantal_inwoners_0_tot_15_jaar) &amp; is.na(df$aantal_inwoners_15_tot_25_jaar) &amp; is.na(df$aantal_inwoners_25_tot_45_jaar) &amp; is.na(df$aantal_inwoners_45_tot_65_jaar) &amp; is.na(df$aantal_inwoners_65_jaar_en_ouder)) #0 NAs!</code></pre>
+<pre><code>## [1] 0</code></pre>
+<pre class="r"><code>sum(df$aantal_inwoners == 0) #but 411 streets with 0 residents</code></pre>
+<pre><code>## [1] 411</code></pre>
+<pre class="r"><code>#estimating the average age
+df &lt;- df |&gt;
+  mutate(
+    age_avg = (
+      (7.5 * aantal_inwoners_0_tot_15_jaar) + 
+      (20 * aantal_inwoners_15_tot_25_jaar) + 
+      (35 * aantal_inwoners_25_tot_45_jaar) +
+      (55 * aantal_inwoners_45_tot_65_jaar) +
+      (75 * aantal_inwoners_65_jaar_en_ouder)  
+              ) 
+    / aantal_inwoners
+        )
+
+summary(df$age_avg)</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
+##    0.00   31.06   37.81   38.30   44.50   83.75     411</code></pre>
+<pre class="r"><code>hist(df$age_avg)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-6-5.png" width="672" /></p>
+<pre class="r"><code>## income
+summary(df$gemiddeld_inkomen_huishouden) #15858 NAs</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
+##   17.30   33.60   36.50   36.72   39.10   70.20   15858</code></pre>
+<pre class="r"><code>df |&gt; 
+  group_by(year) |&gt; 
+  summarise(missing_count = sum(is.na(gemiddeld_inkomen_huishouden))) #data only from 2021 and 2022</code></pre>
+<pre><code>## Simple feature collection with 8 features and 2 fields
+## Geometry type: MULTIPOLYGON
+## Dimension:     XY
+## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
+## Projected CRS: Amersfoort / RD New
+## # A tibble: 8 × 3
+##    year missing_count                                                       geom
+##   &lt;dbl&gt;         &lt;int&gt;                                         &lt;MULTIPOLYGON [m]&gt;
+## 1  2015          2422 (((67757 443783, 67716 443803, 67675 443824, 67614 443854…
+## 2  2016          2440 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
+## 3  2017          2464 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
+## 4  2018          2493 (((65359.35 444766.2, 65065.21 444883.1, 65041.03 444892.…
+## 5  2021           410 (((70474.74 442709, 70479.05 442709.9, 70566.63 442708.8,…
+## 6  2022           408 (((65751.47 443924.7, 65101.49 444222.6, 65225.73 444465.…
+## 7  2023          2596 (((66528.16 443833.8, 66261.06 443820.9, 65860.24 443874.…
+## 8  2024          2625 (((69860.34 442970, 69859.23 442986.6, 69861.07 442997.3,…</code></pre>
+<pre class="r"><code>hist(df$gemiddeld_inkomen_huishouden)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-6-6.png" width="672" /></p>
+<pre class="r"><code>summary(df$percentage_laag_inkomen_huishouden) #7793 NAs</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
+##     1.9    24.7    31.1    32.5    38.2   100.0    7793</code></pre>
+<pre class="r"><code>df |&gt; 
+  group_by(year) |&gt; 
+  summarise(missing_count = sum(is.na(percentage_laag_inkomen_huishouden))) #no data in 2023 and 2024</code></pre>
+<pre><code>## Simple feature collection with 8 features and 2 fields
+## Geometry type: MULTIPOLYGON
+## Dimension:     XY
+## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
+## Projected CRS: Amersfoort / RD New
+## # A tibble: 8 × 3
+##    year missing_count                                                       geom
+##   &lt;dbl&gt;         &lt;int&gt;                                         &lt;MULTIPOLYGON [m]&gt;
+## 1  2015           451 (((67757 443783, 67716 443803, 67675 443824, 67614 443854…
+## 2  2016           438 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
+## 3  2017           436 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
+## 4  2018           429 (((65359.35 444766.2, 65065.21 444883.1, 65041.03 444892.…
+## 5  2021           410 (((70474.74 442709, 70479.05 442709.9, 70566.63 442708.8,…
+## 6  2022           408 (((65751.47 443924.7, 65101.49 444222.6, 65225.73 444465.…
+## 7  2023          2596 (((66528.16 443833.8, 66261.06 443820.9, 65860.24 443874.…
+## 8  2024          2625 (((69860.34 442970, 69859.23 442986.6, 69861.07 442997.3,…</code></pre>
+<pre class="r"><code>hist(df$percentage_laag_inkomen_huishouden)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-6-7.png" width="672" /></p>
+<pre class="r"><code>summary(df$percentage_hoog_inkomen_huishouden) #7796 NAs</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
+##    0.00   18.00   25.00   25.64   30.90   76.90    7796</code></pre>
+<pre class="r"><code>hist(df$percentage_hoog_inkomen_huishouden)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-6-8.png" width="672" /></p>
+<pre class="r"><code>## density/urbanity
+summary(df$omgevingsadressendichtheid) #106 NAs</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
+##       2     834    1394    1441    1966    4945     106</code></pre>
+<pre class="r"><code>hist(df$omgevingsadressendichtheid)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-6-9.png" width="672" /></p>
+<pre class="r"><code>summary(df$stedelijkheid) #106 NAs</code></pre>
+<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
+##   1.000   2.000   3.000   2.874   4.000   5.000     106</code></pre>
+<pre class="r"><code>hist(df$stedelijkheid)</code></pre>
+<p><img src="lab3_files/figure-html/unnamed-chunk-6-10.png" width="672" /></p>
+<p>Calculate the spatial autocorrelation.</p>
+<pre class="r"><code>df_24 &lt;- df |&gt; filter (year == 2024)
+
+nb &lt;- poly2nb(df_24)</code></pre>
+<pre><code>## Warning in poly2nb(df_24): some observations have no neighbours;
+## if this seems unexpected, try increasing the snap argument.</code></pre>
+<pre><code>## Warning in poly2nb(df_24): neighbour object has 2 sub-graphs;
+## if this sub-graph count seems unexpected, try increasing the snap argument.</code></pre>
+<pre class="r"><code>lw &lt;- nb2listw(nb, style = &quot;W&quot;, zero.policy = T)
+
+moran_result &lt;- moran.test(df_24$teruglevering, lw, zero.policy = TRUE)</code></pre>
+<p>Analysis:</p>
+<ul>
+<li><p>Spatial lag panel model (slpm package)?</p></li>
+<li><p>Social network analysis?</p></li>
+<li><p>Panel/multilevel regression with installed base effect (energy
+feed-in by “neighbors” in the previous year)</p>
+<ul>
+<li><p>This allows you to interact on the installed-base variable.
+But:</p>
+<ul>
+<li><p>For the effect of density/urbanity, you have focus on the
+influence between two streets in the same 500m by 500m square.
+How?</p></li>
+<li><p>For the effect of demographic similarity, you have to calculate
+the similarity for each combination of streets and use that in the
+interaction with the installed-base variable. How?</p></li>
+</ul></li>
+</ul></li>
+<li><p>Weight matrix by distance or “queen” contiguity?</p></li>
+<li><p>For the effect of lucrativity, look at period effect? Or add data
+per year with installation price and eletricity price?</p></li>
+</ul>
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIkpvdXJuYWwgMyINCmF1dGhvcjogIkthbGxlIFN0b2ZmZXJzIg0KZGF0ZTogIjIwMjYtMDMtMTEiDQpvdXRwdXQ6IGh0bWxfZG9jdW1lbnQNCi0tLQ0KDQpgYGB7ciBzZXR1cCwgaW5jbHVkZT1GQUxTRX0NCmtuaXRyOjpvcHRzX2NodW5rJHNldChlY2hvID0gVFJVRSkNCmBgYA0KDQojIyBFeHBsb3JpbmcgdGhlIGRhdGENCg0KUmVsZXZhbnQgcGFja2FnZXMNCg0KYGBge3J9DQoNCmBgYA0KDQpBbmFseXplOiBzb2NpYWwgbmV0d29yayBhbmFseXplIG1ldCBlZW4gd2VpZ2h0ZWQgc29jaWFsIG5ldHdvcmsgd2FhcmJpaiBoZXQgZ2V3aWNodCBkZSBhZnN0YW5kIGlzIHR1c3NlbiBkZSBjZW50cm9pZGVzIHZhbiB0d2VlIHN0cmF0ZW4/DQo=</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIkpvdXJuYWwgMyINCmF1dGhvcjogIkthbGxlIFN0b2ZmZXJzIg0KZGF0ZTogIjIwMjYtMDMtMTEiDQpvdXRwdXQ6IGh0bWxfZG9jdW1lbnQNCi0tLQ0KDQpgYGB7ciBzZXR1cCwgaW5jbHVkZT1GQUxTRX0NCmtuaXRyOjpvcHRzX2NodW5rJHNldChlY2hvID0gVFJVRSkNCmBgYA0KDQojIyBFeHBsb3JpbmcgdGhlIGRhdGENCg0KUmVsZXZhbnQgcGFja2FnZXMNCg0KYGBge3J9DQpybShsaXN0PWxzKCkpDQoNCmxpYnJhcnkodGlkeXZlcnNlKQ0KbGlicmFyeShzZikNCmxpYnJhcnkodG1hcCkNCmxpYnJhcnkoc3BkZXApDQoNCmBgYA0KDQpgYGB7cn0NCmRmIDwtIHN0X3JlYWQoZHNuID0gIi4vZGF0YS9tZXJnZWRfZGF0YS5ncGtnIikNCg0KYGBgDQoNCkxvb2tpbmcgYXQgdGhlIHNvbGFyIHBhbmVsIGRhdGEgYWdhaW4NCg0KYGBge3J9DQojbGV2ZXJpbmdzcmljaHRpbmcgZnJvbSBjaGFyYWN0ZXIgdG8gbnVtZXJpYw0KY2xhc3MoZGYkbGV2ZXJpbmdzcmljaHRpbmcpDQpkZiRsZXZlcmluZ3NyaWNodGluZyA8LSBhcy5udW1lcmljKGdzdWIoIiwiLCAiLiIsIGRmJGxldmVyaW5nc3JpY2h0aW5nKSkNCg0KI3JldmVyc2UgDQpkZjwtIGRmfD4gbXV0YXRlKHRlcnVnbGV2ZXJpbmcgPSAxMDAgLSBsZXZlcmluZ3NyaWNodGluZykNCnN1bW1hcnkoZGYkdGVydWdsZXZlcmluZykNCmhpc3QoZGYkdGVydWdsZXZlcmluZykNCmRmICU+JSBmaWx0ZXIodGVydWdsZXZlcmluZyAhPSAwKSAlPiUgbnJvdygpDQoNCiNkaWNob3RvbW91cyB2YXJpYWJsZQ0KZGYgPC0gZGYgfD4gbXV0YXRlICh0ZXJ1Z2xldmVyaW5nX2QgPSBpZl9lbHNlKHRlcnVnbGV2ZXJpbmc+MCwgMSwgMCkpDQpzdW1tYXJ5KGRmJHRlcnVnbGV2ZXJpbmdfZCkNCg0KI3Bsb3RzIG92ZXIgdGltZQ0KZGYgfD4NCiAgZ3JvdXBfYnkoeWVhcikgfD4NCiAgc3VtbWFyaXNlKHllYXJseV9hdmcgPSBtZWFuKHRlcnVnbGV2ZXJpbmcsIG5hLnJtID0gVFJVRSkpIHw+DQogIGdncGxvdChhZXMoeCA9IHllYXIsIHkgPSB5ZWFybHlfYXZnKSkgKw0KICBnZW9tX2xpbmUoKSArDQogIGdlb21fcG9pbnQoKSArDQogIHNjYWxlX3lfY29udGludW91cyhsaW1pdHMgPSBjKDAsIDEwMCkpICsNCiAgc2NhbGVfeF9jb250aW51b3VzKGJyZWFrcyA9IHNlcShtaW4oZGYkeWVhciksIG1heChkZiR5ZWFyKSwgYnkgPSAyKSkrDQogIHRoZW1lX21pbmltYWwoKQ0KDQojZGljaG90b21vdXMNCmRmIHw+DQogIGdyb3VwX2J5KHllYXIpIHw+DQogIHN1bW1hcmlzZSh5ZWFybHlfYXZnID0gbWVhbih0ZXJ1Z2xldmVyaW5nX2QsIG5hLnJtID0gVFJVRSkgKiAxMDApIHw+DQogIGdncGxvdChhZXMoeCA9IHllYXIsIHkgPSB5ZWFybHlfYXZnKSkgKw0KICBnZW9tX2xpbmUoKSArDQogIGdlb21fcG9pbnQoKSArDQogIHNjYWxlX3lfY29udGludW91cyhsaW1pdHMgPSBjKDAsIDEwMCkpICsNCiAgc2NhbGVfeF9jb250aW51b3VzKGJyZWFrcyA9IHNlcShtaW4oZGYkeWVhciksIG1heChkZiR5ZWFyKSwgYnkgPSAyKSkrDQogIHRoZW1lX21pbmltYWwoKQ0KDQpgYGANCg0KTGV0J3MgcGxvdCB0aGUgZGF0YSBvbiBhIG1hcCB1c2luZyBnZ3Bsb3QuDQoNCmBgYHtyfQ0KI3Bsb3QgdGhlIGRhdGENCmRmIHw+DQogIGZpbHRlcih5ZWFyID09IDIwMjQpIHw+DQogIGdncGxvdCgNCiAgICBhZXMoZmlsbCA9IHRlcnVnbGV2ZXJpbmcpDQogICkgKw0KICBnZW9tX3NmKGNvbG9yID0gTkEpICsNCiAgc2NhbGVfZmlsbF92aXJpZGlzX2Mob3B0aW9uID0gInBsYXNtYSIsIG5hbWUgPSAiRW5lcmd5IGZlZWQtaW4iKSArDQogIHRoZW1lX21pbmltYWwoKQ0KDQoNCg0KYGBgDQoNCk5vdyB3ZSBoYXZlIG9ubHkgbWFwcGVkIHRoZSBkYXRhIGZvciBhIHNpbmdsZSB5ZWFyLiBOb3csIHdlIGNyZWF0ZSBhIG1hcCBvZiBhbGwgdGhlIHllYXJzIHVzaW5nIHRtYXA6DQoNCmBgYHtyfQ0KdG1hcF9tb2RlKCJwbG90IikNCg0KdG1fc2hhcGUoZGYpICsNCiAgdG1fZmlsbCgidGVydWdsZXZlcmluZyIpICsNCiAgdG1fZmFjZXRzKGJ5ID0gInllYXIiKQ0KDQpgYGANCg0KTG9va2luZyBhdCByZWxldmFudCB2YXJpYWJsZXMuIEhpZ2ggbGV2ZWxzIG9mIG1pc3NpbmduZXNzIGluIHRoZSBkYXRhISBNYXliZSBJIGNhbiB1c2Ugc3BhdGlhbCArIHRlbXBvcmFsIGludGVycG9sYXRpb24gdG8gaW1wdXRlIHRoZSBkYXRhPw0KDQpgYGB7cn0NCiMjIGV0aG5pdGljaXR5DQpzdW1tYXJ5KGRmJHBlcmNlbnRhZ2VfZ2ViX25lZGVybGFuZF9oZXJrb21zdF9uZWRlcmxhbmQpICM1NjUgTkFzDQpzdW0oDQogICAgaXMubmEoZGYkcGVyY2VudGFnZV9nZWJfbmVkZXJsYW5kX2hlcmtvbXN0X25lZGVybGFuZCkgJiANCiAgICBpcy5uYShkZiRwZXJjZW50YWdlX2dlYl9uZWRlcmxhbmRfaGVya29tc3Rfb3ZlcmlnX2V1cm9wYSkgJiANCiAgICBpcy5uYShkZiRwZXJjZW50YWdlX2dlYl9uZWRlcmxhbmRfaGVya29tc3RfYnVpdGVuX2V1cm9wYSkgJiANCiAgICBpcy5uYShkZiRwZXJjZW50YWdlX2dlYl9idWl0ZW5fbmVkZXJsYW5kX2hlcmtvbXN0X2V1cm9wYSkgJg0KICAgIGlzLm5hKGRmJHBlcmNlbnRhZ2VfZ2ViX2J1aXRlbl9uZWRlcmxhbmRfaGVya21zdF9idWl0ZW5fZXVyb3BhKSAmDQogICAgaXMubmEoZGYkcGVyY2VudGFnZV93ZXN0ZXJzZV9taWdyX2FjaHRlcmdyKSAmDQogICAgaXMubmEoZGYkcGVyY2VudGFnZV9uaWV0X3dlc3RlcnNlX21pZ3JfYWNodGVyZ3IpICANCiAgICApICM1MzMgdHJ1bHkgbWlzc2luZywgMzIgbGlrZWx5IHZhbHVlIGNsb3NlIHRvIDAuIA0KDQpoaXN0KGRmJHBlcmNlbnRhZ2VfZ2ViX25lZGVybGFuZF9oZXJrb21zdF9uZWRlcmxhbmQpDQoNCiMjIGhvbWUgb3duZXJzaGlwDQpzdW1tYXJ5KGRmJHBlcmNlbnRhZ2Vfa29vcHdvbmluZ2VuKSAjNDgzNiBOQXMNCmRmIHw+IGZpbHRlcihpcy5uYShwZXJjZW50YWdlX2tvb3B3b25pbmdlbikgJiBpcy5uYShwZXJjZW50YWdlX2h1dXJ3b25pbmdlbikpIHw+IHN1bW1hcmlzZShjb3VudCA9IG4oKSkgIzM5NTggb2YgdGhvc2UgaGF2ZSBtaXNzaW5nIHZhbHVlIG9uIGJvdGggcmVudGVkIGFuZCBvd25lZCBob21lcw0KZGYgfD4gZmlsdGVyKGlzLm5hKHBlcmNlbnRhZ2Vfa29vcHdvbmluZ2VuKSAmICFpcy5uYShwZXJjZW50YWdlX2h1dXJ3b25pbmdlbikpIHw+IHN1bW1hcmlzZShjb3VudCA9IG4oKSkgIzg3OCBzdHJlZXRzIGxpa2VseSBoYXZlIGNsb3NlIHRvIDAgaG9tZSBvd25lcnNoaXANCg0KZGYgfD4gDQogIGdyb3VwX2J5KHllYXIpIHw+IA0KICBzdW1tYXJpc2UobWlzc2luZ19jb3VudCA9IHN1bShpcy5uYShwZXJjZW50YWdlX2tvb3B3b25pbmdlbikpKSAjIGFib3V0IDYwMCBOQXMgaW4gZXZlcnkgeWVhcg0KDQpoaXN0KGRmJHBlcmNlbnRhZ2Vfa29vcHdvbmluZ2VuKQ0KDQojIyBwcm9wZXJ0eSB2YWx1ZQ0Kc3VtbWFyeShkZiRnZW1pZGRlbGRlX3dvel93YWFyZGVfd29uaW5nKSAjNjIxOSBOQXMNCmRmIHw+IA0KICBncm91cF9ieSh5ZWFyKSB8PiANCiAgc3VtbWFyaXNlKG1pc3NpbmdfY291bnQgPSBzdW0oaXMubmEoZ2VtaWRkZWxkZV93b3pfd2FhcmRlX3dvbmluZykpKSAjbm8gZGF0YSBpbiAyMDE1IGFuZCAyMDI0DQoNCmhpc3QoZGYkZ2VtaWRkZWxkZV93b3pfd2FhcmRlX3dvbmluZykNCg0KIyMgZWxlY3RyaWNpdHkgdXNlDQpzdW1tYXJ5KGRmJGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZykgIzM0NzYgTkFzDQpkZiB8PiANCiAgZ3JvdXBfYnkoeWVhcikgfD4gDQogIHN1bW1hcmlzZShtaXNzaW5nX2NvdW50ID0gc3VtKGlzLm5hKGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZykpKSAjbm8gZGF0YSBpbiAyMDI0DQoNCmhpc3QoZGYkZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nKQ0KDQojIyBhZ2UNCnN1bShpcy5uYShkZiRhYW50YWxfaW53b25lcnNfMF90b3RfMTVfamFhcikgJiBpcy5uYShkZiRhYW50YWxfaW53b25lcnNfMTVfdG90XzI1X2phYXIpICYgaXMubmEoZGYkYWFudGFsX2lud29uZXJzXzI1X3RvdF80NV9qYWFyKSAmIGlzLm5hKGRmJGFhbnRhbF9pbndvbmVyc180NV90b3RfNjVfamFhcikgJiBpcy5uYShkZiRhYW50YWxfaW53b25lcnNfNjVfamFhcl9lbl9vdWRlcikpICMwIE5BcyENCg0Kc3VtKGRmJGFhbnRhbF9pbndvbmVycyA9PSAwKSAjYnV0IDQxMSBzdHJlZXRzIHdpdGggMCByZXNpZGVudHMNCg0KI2VzdGltYXRpbmcgdGhlIGF2ZXJhZ2UgYWdlDQpkZiA8LSBkZiB8Pg0KICBtdXRhdGUoDQogICAgYWdlX2F2ZyA9ICgNCiAgICAgICg3LjUgKiBhYW50YWxfaW53b25lcnNfMF90b3RfMTVfamFhcikgKyANCiAgICAgICgyMCAqIGFhbnRhbF9pbndvbmVyc18xNV90b3RfMjVfamFhcikgKyANCiAgICAgICgzNSAqIGFhbnRhbF9pbndvbmVyc18yNV90b3RfNDVfamFhcikgKw0KICAgICAgKDU1ICogYWFudGFsX2lud29uZXJzXzQ1X3RvdF82NV9qYWFyKSArDQogICAgICAoNzUgKiBhYW50YWxfaW53b25lcnNfNjVfamFhcl9lbl9vdWRlcikgIA0KICAgICAgICAgICAgICApIA0KICAgIC8gYWFudGFsX2lud29uZXJzDQogICAgICAgICkNCg0Kc3VtbWFyeShkZiRhZ2VfYXZnKQ0KaGlzdChkZiRhZ2VfYXZnKQ0KDQojIyBpbmNvbWUNCnN1bW1hcnkoZGYkZ2VtaWRkZWxkX2lua29tZW5faHVpc2hvdWRlbikgIzE1ODU4IE5Bcw0KZGYgfD4gDQogIGdyb3VwX2J5KHllYXIpIHw+IA0KICBzdW1tYXJpc2UobWlzc2luZ19jb3VudCA9IHN1bShpcy5uYShnZW1pZGRlbGRfaW5rb21lbl9odWlzaG91ZGVuKSkpICNkYXRhIG9ubHkgZnJvbSAyMDIxIGFuZCAyMDIyDQoNCmhpc3QoZGYkZ2VtaWRkZWxkX2lua29tZW5faHVpc2hvdWRlbikNCg0Kc3VtbWFyeShkZiRwZXJjZW50YWdlX2xhYWdfaW5rb21lbl9odWlzaG91ZGVuKSAjNzc5MyBOQXMNCmRmIHw+IA0KICBncm91cF9ieSh5ZWFyKSB8PiANCiAgc3VtbWFyaXNlKG1pc3NpbmdfY291bnQgPSBzdW0oaXMubmEocGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbikpKSAjbm8gZGF0YSBpbiAyMDIzIGFuZCAyMDI0DQoNCmhpc3QoZGYkcGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbikNCg0Kc3VtbWFyeShkZiRwZXJjZW50YWdlX2hvb2dfaW5rb21lbl9odWlzaG91ZGVuKSAjNzc5NiBOQXMNCmhpc3QoZGYkcGVyY2VudGFnZV9ob29nX2lua29tZW5faHVpc2hvdWRlbikNCg0KDQojIyBkZW5zaXR5L3VyYmFuaXR5DQpzdW1tYXJ5KGRmJG9tZ2V2aW5nc2FkcmVzc2VuZGljaHRoZWlkKSAjMTA2IE5Bcw0KaGlzdChkZiRvbWdldmluZ3NhZHJlc3NlbmRpY2h0aGVpZCkNCg0Kc3VtbWFyeShkZiRzdGVkZWxpamtoZWlkKSAjMTA2IE5Bcw0KaGlzdChkZiRzdGVkZWxpamtoZWlkKQ0KDQpgYGANCg0KQ2FsY3VsYXRlIHRoZSBzcGF0aWFsIGF1dG9jb3JyZWxhdGlvbi4NCg0KYGBge3J9DQoNCmRmXzI0IDwtIGRmIHw+IGZpbHRlciAoeWVhciA9PSAyMDI0KQ0KDQpuYiA8LSBwb2x5Mm5iKGRmXzI0KQ0KDQpsdyA8LSBuYjJsaXN0dyhuYiwgc3R5bGUgPSAiVyIsIHplcm8ucG9saWN5ID0gVCkNCg0KbW9yYW5fcmVzdWx0IDwtIG1vcmFuLnRlc3QoZGZfMjQkdGVydWdsZXZlcmluZywgbHcsIHplcm8ucG9saWN5ID0gVFJVRSkNCmBgYA0KDQpBbmFseXNpczoNCg0KLSAgIFNwYXRpYWwgbGFnIHBhbmVsIG1vZGVsIChzbHBtIHBhY2thZ2UpPw0KDQotICAgU29jaWFsIG5ldHdvcmsgYW5hbHlzaXM/DQoNCi0gICBQYW5lbC9tdWx0aWxldmVsIHJlZ3Jlc3Npb24gd2l0aCBpbnN0YWxsZWQgYmFzZSBlZmZlY3QgKGVuZXJneSBmZWVkLWluIGJ5ICJuZWlnaGJvcnMiIGluIHRoZSBwcmV2aW91cyB5ZWFyKQ0KDQogICAgLSAgIFRoaXMgYWxsb3dzIHlvdSB0byBpbnRlcmFjdCBvbiB0aGUgaW5zdGFsbGVkLWJhc2UgdmFyaWFibGUuIEJ1dDoNCg0KICAgICAgICAtICAgRm9yIHRoZSBlZmZlY3Qgb2YgZGVuc2l0eS91cmJhbml0eSwgeW91IGhhdmUgZm9jdXMgb24gdGhlIGluZmx1ZW5jZSBiZXR3ZWVuIHR3byBzdHJlZXRzIGluIHRoZSBzYW1lIDUwMG0gYnkgNTAwbSBzcXVhcmUuIEhvdz8NCg0KICAgICAgICAtICAgRm9yIHRoZSBlZmZlY3Qgb2YgZGVtb2dyYXBoaWMgc2ltaWxhcml0eSwgeW91IGhhdmUgdG8gY2FsY3VsYXRlIHRoZSBzaW1pbGFyaXR5IGZvciBlYWNoIGNvbWJpbmF0aW9uIG9mIHN0cmVldHMgYW5kIHVzZSB0aGF0IGluIHRoZSBpbnRlcmFjdGlvbiB3aXRoIHRoZSBpbnN0YWxsZWQtYmFzZSB2YXJpYWJsZS4gSG93Pw0KDQotICAgV2VpZ2h0IG1hdHJpeCBieSBkaXN0YW5jZSBvciAicXVlZW4iIGNvbnRpZ3VpdHk/DQoNCi0gICBGb3IgdGhlIGVmZmVjdCBvZiBsdWNyYXRpdml0eSwgbG9vayBhdCBwZXJpb2QgZWZmZWN0PyBPciBhZGQgZGF0YSBwZXIgeWVhciB3aXRoIGluc3RhbGxhdGlvbiBwcmljZSBhbmQgZWxldHJpY2l0eSBwcmljZT8NCg==</div>
 
 
 </div>

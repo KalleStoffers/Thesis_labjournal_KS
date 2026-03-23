@@ -105,7 +105,8 @@ Solar energy over time
 ```{r}
 
 class(pv$X.Leveringsrichting)
-pv$X.Leveringsrichting <- as.numeric(pv$X.Leveringsrichting)
+summary(pv$X.Leveringsrichting)
+pv$X.Leveringsrichting <- as.numeric(gsub(",", ".", pv$X.Leveringsrichting))
 
 pv |>
   group_by(year) |>

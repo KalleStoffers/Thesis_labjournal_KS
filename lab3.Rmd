@@ -14,7 +14,209 @@ knitr::opts_chunk$set(echo = TRUE)
 Relevant packages
 
 ```{r}
+rm(list=ls())
+
+library(tidyverse)
+library(sf)
+library(tmap)
+library(spdep)
 
 ```
 
-Analyze: social network analyze met een weighted social network waarbij het gewicht de afstand is tussen de centroides van twee straten?
+```{r}
+df <- st_read(dsn = "./data/merged_data.gpkg")
+
+```
+
+Looking at the solar panel data again
+
+```{r}
+#leveringsrichting from character to numeric
+class(df$leveringsrichting)
+df$leveringsrichting <- as.numeric(gsub(",", ".", df$leveringsrichting))
+
+#reverse 
+df<- df|> mutate(teruglevering = 100 - leveringsrichting)
+summary(df$teruglevering)
+hist(df$teruglevering)
+df %>% filter(teruglevering != 0) %>% nrow()
+
+#dichotomous variable
+df <- df |> mutate (teruglevering_d = if_else(teruglevering>0, 1, 0))
+summary(df$teruglevering_d)
+
+#plots over time
+df |>
+  group_by(year) |>
+  summarise(yearly_avg = mean(teruglevering, na.rm = TRUE)) |>
+  ggplot(aes(x = year, y = yearly_avg)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 2))+
+  theme_minimal()
+
+#dichotomous
+df |>
+  group_by(year) |>
+  summarise(yearly_avg = mean(teruglevering_d, na.rm = TRUE) * 100) |>
+  ggplot(aes(x = year, y = yearly_avg)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 2))+
+  theme_minimal()
+
+```
+
+Let's plot the data on a map using ggplot.
+
+```{r}
+#plot the data
+df |>
+  filter(year == 2024) |>
+  ggplot(
+    aes(fill = teruglevering)
+  ) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c(option = "plasma", name = "Energy feed-in") +
+  theme_minimal()
+
+
+
+```
+
+Now we have only mapped the data for a single year. Now, we create a map of all the years using tmap:
+
+```{r}
+tmap_mode("plot")
+
+tm_shape(df) +
+  tm_fill("teruglevering") +
+  tm_facets(by = "year")
+
+```
+
+Looking at relevant variables. High levels of missingness in the data! Maybe I can use spatial + temporal interpolation to impute the data?
+
+```{r}
+## ethniticity
+summary(df$percentage_geb_nederland_herkomst_nederland) #565 NAs
+sum(
+    is.na(df$percentage_geb_nederland_herkomst_nederland) & 
+    is.na(df$percentage_geb_nederland_herkomst_overig_europa) & 
+    is.na(df$percentage_geb_nederland_herkomst_buiten_europa) & 
+    is.na(df$percentage_geb_buiten_nederland_herkomst_europa) &
+    is.na(df$percentage_geb_buiten_nederland_herkmst_buiten_europa) &
+    is.na(df$percentage_westerse_migr_achtergr) &
+    is.na(df$percentage_niet_westerse_migr_achtergr)  
+    ) #533 truly missing, 32 likely value close to 0. 
+
+hist(df$percentage_geb_nederland_herkomst_nederland)
+
+## home ownership
+summary(df$percentage_koopwoningen) #4836 NAs
+df |> filter(is.na(percentage_koopwoningen) & is.na(percentage_huurwoningen)) |> summarise(count = n()) #3958 of those have missing value on both rented and owned homes
+df |> filter(is.na(percentage_koopwoningen) & !is.na(percentage_huurwoningen)) |> summarise(count = n()) #878 streets likely have close to 0 home ownership
+
+df |> 
+  group_by(year) |> 
+  summarise(missing_count = sum(is.na(percentage_koopwoningen))) # about 600 NAs in every year
+
+hist(df$percentage_koopwoningen)
+
+## property value
+summary(df$gemiddelde_woz_waarde_woning) #6219 NAs
+df |> 
+  group_by(year) |> 
+  summarise(missing_count = sum(is.na(gemiddelde_woz_waarde_woning))) #no data in 2015 and 2024
+
+hist(df$gemiddelde_woz_waarde_woning)
+
+## electricity use
+summary(df$gemiddeld_elektriciteitsverbruik_woning) #3476 NAs
+df |> 
+  group_by(year) |> 
+  summarise(missing_count = sum(is.na(gemiddeld_elektriciteitsverbruik_woning))) #no data in 2024
+
+hist(df$gemiddeld_elektriciteitsverbruik_woning)
+
+## age
+sum(is.na(df$aantal_inwoners_0_tot_15_jaar) & is.na(df$aantal_inwoners_15_tot_25_jaar) & is.na(df$aantal_inwoners_25_tot_45_jaar) & is.na(df$aantal_inwoners_45_tot_65_jaar) & is.na(df$aantal_inwoners_65_jaar_en_ouder)) #0 NAs!
+
+sum(df$aantal_inwoners == 0) #but 411 streets with 0 residents
+
+#estimating the average age
+df <- df |>
+  mutate(
+    age_avg = (
+      (7.5 * aantal_inwoners_0_tot_15_jaar) + 
+      (20 * aantal_inwoners_15_tot_25_jaar) + 
+      (35 * aantal_inwoners_25_tot_45_jaar) +
+      (55 * aantal_inwoners_45_tot_65_jaar) +
+      (75 * aantal_inwoners_65_jaar_en_ouder)  
+              ) 
+    / aantal_inwoners
+        )
+
+summary(df$age_avg)
+hist(df$age_avg)
+
+## income
+summary(df$gemiddeld_inkomen_huishouden) #15858 NAs
+df |> 
+  group_by(year) |> 
+  summarise(missing_count = sum(is.na(gemiddeld_inkomen_huishouden))) #data only from 2021 and 2022
+
+hist(df$gemiddeld_inkomen_huishouden)
+
+summary(df$percentage_laag_inkomen_huishouden) #7793 NAs
+df |> 
+  group_by(year) |> 
+  summarise(missing_count = sum(is.na(percentage_laag_inkomen_huishouden))) #no data in 2023 and 2024
+
+hist(df$percentage_laag_inkomen_huishouden)
+
+summary(df$percentage_hoog_inkomen_huishouden) #7796 NAs
+hist(df$percentage_hoog_inkomen_huishouden)
+
+
+## density/urbanity
+summary(df$omgevingsadressendichtheid) #106 NAs
+hist(df$omgevingsadressendichtheid)
+
+summary(df$stedelijkheid) #106 NAs
+hist(df$stedelijkheid)
+
+```
+
+Calculate the spatial autocorrelation.
+
+```{r}
+
+df_24 <- df |> filter (year == 2024)
+
+nb <- poly2nb(df_24)
+
+lw <- nb2listw(nb, style = "W", zero.policy = T)
+
+moran_result <- moran.test(df_24$teruglevering, lw, zero.policy = TRUE)
+```
+
+Analysis:
+
+-   Spatial lag panel model (slpm package)?
+
+-   Social network analysis?
+
+-   Panel/multilevel regression with installed base effect (energy feed-in by "neighbors" in the previous year)
+
+    -   This allows you to interact on the installed-base variable. But:
+
+        -   For the effect of density/urbanity, you have focus on the influence between two streets in the same 500m by 500m square. How?
+
+        -   For the effect of demographic similarity, you have to calculate the similarity for each combination of streets and use that in the interaction with the installed-base variable. How?
+
+-   Weight matrix by distance or "queen" contiguity?
+
+-   For the effect of lucrativity, look at period effect? Or add data per year with installation price and eletricity price?
