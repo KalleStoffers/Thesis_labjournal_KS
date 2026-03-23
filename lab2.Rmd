@@ -24,7 +24,7 @@ library(tidyverse)
 library(sf)
 ```
 
-Age, ethnic background, percentage of home ownership, average property value and electricity usage is known at the postal code level, so we import the CBS data per PC6 postal code. These data can be downloaded here: <https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode>
+Most of the data we want is known at the postal code level, so we import the CBS data per PC6 postal code. These data can be downloaded here: <https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode>. The data from 2020 and 2019 is unavailable at this moment but should be available before the 1st of May. The data from 2021-2024 and 2015-2018 are named a bit differently so we first rename and select the relevant columns before joining.
 
 ```{r eval = FALSE, results = 'hide', message = FALSE, warning = FALSE}
 #load data
@@ -35,11 +35,18 @@ cbs_pc6_23 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_pc6_2023_v2.gpkg") |>
 cbs_pc6_22 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_pc6_2022_vol.gpkg") |>
   mutate (year = 2022)
 cbs_pc6_21 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_pc6_2021_vol.gpkg") |>
-  mutate (year = 2021)
+  mutate (year = 2021) |>
+  rename (percentage_geb_nederland_herkomst_nederland = percentage_nederlandse_achtergrond)
 
-#data from 2020 and 2019 is unavailable at this moment but will be available before the 1st of May
+cbs_pc6_2124 <- bind_rows(cbs_pc6_24, cbs_pc6_23, cbs_pc6_22, cbs_pc6_21) |>
+  select (- c(10, 17:20, 23:31, 37, 40:131))
 
-cbs_pc6_18 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2018-v3/CBS_PC6_2018_v3.shp") |>    mutate (year = 2018)
+rm(cbs_pc6_24, cbs_pc6_23, cbs_pc6_22, cbs_pc6_21)
+gc()
+
+cbs_pc6_18 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2018-v3/CBS_PC6_2018_v3.shp") |>  
+  mutate (year = 2018) |>
+  rename (Postcode = PC6)
 cbs_pc6_17 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2017-v3/CBS_PC6_2017_v3.shp") |>
   mutate (year = 2017)
 cbs_pc6_16 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2016-v2/CBS_PC6_2016_v2.shp") |>
@@ -47,13 +54,46 @@ cbs_pc6_16 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2016-v2/CBS_PC6_20
 cbs_pc6_15 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2015-v2/CBS_PC6_2015_v2.shp") |>
   mutate (year = 2015)
 
+cbs_pc6_1518 <- bind_rows(cbs_pc6_18, cbs_pc6_17, cbs_pc6_16, cbs_pc6_15) |>
+  rename (
+    postcode6 = Postcode,
+    aantal_inwoners = INWONER,
+    aantal_mannen = MAN,
+    aantal_vrouwen = VROUW,
+    aantal_inwoners_0_tot_15_jaar = INW_014,
+    aantal_inwoners_15_tot_25_jaar = INW_1524,
+    aantal_inwoners_25_tot_45_jaar = INW_2544,
+    aantal_inwoners_45_tot_65_jaar = INW_4564,
+    aantal_inwoners_65_jaar_en_ouder = INW_65PL,
+    percentage_geb_nederland_herkomst_nederland = P_NL_ACHTG,
+    percentage_westerse_migr_achtergr = P_WE_MIG_A,
+    percentage_niet_westerse_migr_achtergr = P_NW_MIG_A,
+    aantal_part_huishoudens = AANTAL_HH,
+    gemiddelde_huishoudensgrootte = GEM_HH_GR,
+    aantal_woningen = WONING,
+    percentage_koopwoningen = P_KOOPWON, 
+    percentage_huurwoningen = P_HUURWON,
+    aantal_huurwoningen_in_bezit_woningcorporaties = WON_HCORP,
+    aantal_niet_bewoonde_woningen = WON_NBEW,
+    gemiddelde_woz_waarde_woning = WOZWONING, 
+    gemiddeld_elektriciteitsverbruik_woning = G_ELEK_WON,
+    aantal_personen_met_uitkering_onder_aowlft = UITKMINAOW,
+    geom = geometry
+  ) |>
+  select (- c(10, 15:18, 21:29, 35, 39:130))
+  
+rm(cbs_pc6_18, cbs_pc6_17, cbs_pc6_16, cbs_pc6_15)
+gc()
 
-#merge and NAs
-cbs_pc6 <- bind_rows(cbs_pc6_24, cbs_pc6_23, cbs_pc6_22) |>
-  arrange (postcode6, year) |>
+#join and set NAs
+cbs_pc6 <- bind_rows(cbs_pc6_2124, cbs_pc6_1518) |>
   relocate (postcode6, year, geom)|>
   mutate(across(where(is.numeric), ~na_if(., -99997))) |>
-  mutate(across(where(is.numeric), ~na_if(., -99995)))
+  mutate(across(where(is.numeric), ~na_if(., -99995))) 
+
+rm(cbs_pc6_2124, cbs_pc6_1518)
+gc()
+
 ```
 
 Some streets in the PV data have multiple postal codes:
@@ -61,7 +101,7 @@ Some streets in the PV data have multiple postal codes:
 ```{r eval=FALSE}
 #load pv data and add id
 pv <- readRDS("./data/pv_data.Rds") |>
-  filter(year >= 2022) |>
+  filter(year >= 2015) |>
   mutate(id = row_number()) |>
   relocate(id)
 
@@ -76,7 +116,7 @@ meerdere_postcodes <- pv |>
 We select the CBS postal codes which match the streets from the PV data.
 
 ```{r eval=FALSE, results = 'hide'}
-cbs_pc6_sel <- cbs_pc6 |>
+cbs_pc6_westland <- cbs_pc6 |>
   inner_join(
     pv, 
     by = join_by(
@@ -87,12 +127,15 @@ cbs_pc6_sel <- cbs_pc6 |>
   ) |>
   relocate(postcode6, geom, year, id, POSTCODE_VAN, POSTCODE_TOT, STRAATNAAM, X.Leveringsrichting)
 
+rm(cbs_pc6, meerdere_postcodes)
+gc()
+
 ```
 
 Now we collapse the multiple rows into a single row per street in the PV data.
 
 ```{r eval=FALSE}
-df <- cbs_pc6_sel |>
+df <- cbs_pc6_westland |>
   group_by(id) |>
   summarise(
     
@@ -114,8 +157,10 @@ df <- cbs_pc6_sel |>
         percentage_geb_nederland_herkomst_overig_europa,
         percentage_geb_nederland_herkomst_buiten_europa,
         percentage_geb_buiten_nederland_herkomst_europa,
-        percentage_geb_buiten_nederland_herkmst_buiten_europa
-      ),
+        percentage_geb_buiten_nederland_herkmst_buiten_europa,
+        percentage_westerse_migr_achtergr,
+        percentage_niet_westerse_migr_achtergr
+        ),
       ~ weighted.mean(.x, aantal_inwoners, na.rm = TRUE)
     ),
     
@@ -168,40 +213,73 @@ cbs_500_23 <- st_read(dsn = "C:/Users/kalle/Downloads/2025-cbs_vk500_2023_v2/cbs
   mutate (year = 2023)
 cbs_500_22 <- st_read(dsn = "C:/Users/kalle/Downloads/2025-cbs_vk500_2022_vol/cbs_vk500_2022_vol.gpkg") |>
   mutate (year = 2022)
+cbs_500_21 <- st_read(dsn = "C:/Users/kalle/Downloads/2024-cbs_vk500_2021_vol/cbs_vk500_2021_vol.gpkg") |>
+  mutate (year = 2021)
+cbs_500_20 <- st_read(dsn = "C:/Users/kalle/Downloads/2023-cbs_vk500_2020_vol/cbs_vk500_2020_vol.gpkg") |>
+  mutate (year = 2020)
+cbs_500_19 <- st_read(dsn = "C:/Users/kalle/Downloads/2023-cbs_vk500_2019_vol2/cbs_vk500_2019_vol2.gpkg") |>
+  mutate (year = 2019)
+cbs_500_18 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_vk500_2018.gpkg") |>
+  mutate (year = 2018) |>
+  rename(crs28992res500m = c28992r500)
+cbs_500_17 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_vk500_2017.gpkg") |>
+  mutate (year = 2017) |>
+  rename(crs28992res500m = c28992r500)
 
-cbs_500 <- bind_rows(cbs_500_24, cbs_500_23, cbs_500_22) |>
+cbs_500_16 <- st_read(dsn = "C:/Users/kalle/Downloads/2019-cbs_vk500_2016_v2/CBS_VK500_2016_v2.shp") |>
+  mutate (year = 2016) |>
+  rename(
+    crs28992res500m = C28992R500,
+    percentage_laag_inkomen_huishouden = P_LINK_HH, 
+    percentage_hoog_inkomen_huishouden = P_HINK_HH, 
+    omgevingsadressendichtheid = OAD, 
+    stedelijkheid = STED, 
+    geom = geometry
+  )
+
+cbs_500_15 <- st_read(dsn = "C:/Users/kalle/Downloads/2019-cbs_vk500_2015_v2/CBS_VK500_2015_v2.shp") |>
+  mutate (year = 2015) |>
+  rename(
+    crs28992res500m = C28992R500,
+    percentage_laag_inkomen_huishouden = P_LINK_HH, 
+    percentage_hoog_inkomen_huishouden = P_HINK_HH, 
+    omgevingsadressendichtheid = OAD, 
+    stedelijkheid = STED, 
+    geom = geometry
+  )
+
+cbs_500 <- bind_rows(cbs_500_24, cbs_500_23, cbs_500_22, cbs_500_21, cbs_500_20, cbs_500_19, cbs_500_18, cbs_500_17, cbs_500_16, cbs_500_15) |>
   
-  select(crs28992res500m, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid, geom, year)|>
+  select(crs28992res500m, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, M_INKHH, omgevingsadressendichtheid, stedelijkheid, geom, year)|>
   
-  relocate(crs28992res500m, geom, year, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid) |>
+  relocate(crs28992res500m, geom, year, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, M_INKHH, omgevingsadressendichtheid, stedelijkheid) |>
   
   mutate(across(where(is.numeric), ~na_if(., -99997))) |>
   mutate(across(where(is.numeric), ~na_if(., -99995)))
+
+rm(cbs_500_24, cbs_500_23, cbs_500_22, cbs_500_21, cbs_500_20, cbs_500_19, cbs_500_18, cbs_500_17, cbs_500_16, cbs_500_15)
+gc()
 ```
 
 Now we join the squares with the postal code areas based on the largest overlapping area.
 
 ```{r eval =FALSE}
-#match the squares belonging to the postal code area and keep only the square id
+#match the squares belonging to the postal code area and keep only the square coordinates
 df <- df |>
   st_join(cbs_500,join = st_intersects, left = T, largest = T) |>
-  select(-c(year.y, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid))
+  select(-c(year.y, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid, M_INKHH))
 
 #match the square attributes in the right year
 df <- df |>
   left_join (st_drop_geometry(cbs_500), by = c("crs28992res500m", "year.x" = "year")) |>
-  rename(year = year.x)
-
-```
-
-```{r eval=FALSE}
-df <- df |> 
+  rename(year = year.x) |>
   mutate(across(where(is.numeric), ~na_if(., NaN)))
+
 ```
 
 Saving the data!
 
 ```{r eval=FALSE}
-saveRDS(df, file = "./data/merged_data.Rds")
+st_write(df, "./data/merged_data.gpkg")
 
 ```
