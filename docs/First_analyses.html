@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Kalle Stoffers" />
+
+<meta name="date" content="2026-04-06" />
+
+<title>First analyses</title>
+
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<script src="site_libs/navigation-1.1/sourceembed.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-6.5.2/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+<style type="text/css">
+#rmd-source-code {
+  display: none;
+}
+</style>
+
+
+<link rel="stylesheet" href="tweaks.css" type="text/css" />
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html"></a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">
+    <span class="fa fa-home"></span>
+     
+  </a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    My journal
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="lab1.html">Page 1</a>
+    </li>
+    <li>
+      <a href="lab2.html">Page 2</a>
+    </li>
+    <li>
+      <a href="Preparing_data_clean.html">Page 3</a>
+    </li>
+    <li>
+      <a href="First_analyses.html">Page 4</a>
+    </li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/JochemTolsma/labjournal">
+    <span class="fab fa-github"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+<li role="separator" class="divider"></li>
+<li><a id="rmd-download-source" href="#">Download Rmd</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">First analyses</h1>
+<h4 class="author">Kalle Stoffers</h4>
+<h4 class="date">2026-04-06</h4>
+
+</div>
+
+
+<pre class="r"><code>rm(list=ls())
+
+library(tidyverse)</code></pre>
+<pre><code>## ── Attaching core tidyverse packages ───────────── tidyverse 2.0.0 ──
+## ✔ dplyr     1.1.4     ✔ readr     2.1.5
+## ✔ forcats   1.0.0     ✔ stringr   1.5.1
+## ✔ ggplot2   4.0.0     ✔ tibble    3.3.0
+## ✔ lubridate 1.9.4     ✔ tidyr     1.3.1
+## ✔ purrr     1.1.0     
+## ── Conflicts ─────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()
+## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
+<pre class="r"><code>library(sf)</code></pre>
+<pre><code>## Warning: package &#39;sf&#39; was built under R version 4.5.2</code></pre>
+<pre><code>## Linking to GEOS 3.13.1, GDAL 3.11.4, PROJ 9.7.0; sf_use_s2() is TRUE</code></pre>
+<pre class="r"><code>library(tmap)</code></pre>
+<pre><code>## Warning: package &#39;tmap&#39; was built under R version 4.5.2</code></pre>
+<pre class="r"><code>library(spdep)</code></pre>
+<pre><code>## Warning: package &#39;spdep&#39; was built under R version 4.5.2</code></pre>
+<pre><code>## Loading required package: spData</code></pre>
+<pre><code>## Warning: package &#39;spData&#39; was built under R version 4.5.2</code></pre>
+<pre><code>## To access larger datasets in this package, install the spDataLarge
+## package with: `install.packages(&#39;spDataLarge&#39;,
+## repos=&#39;https://nowosad.github.io/drat/&#39;, type=&#39;source&#39;)`</code></pre>
+<pre class="r"><code>library(lme4)</code></pre>
+<pre><code>## Warning: package &#39;lme4&#39; was built under R version 4.5.2</code></pre>
+<pre><code>## Loading required package: Matrix
+## 
+## Attaching package: &#39;Matrix&#39;
+## 
+## The following objects are masked from &#39;package:tidyr&#39;:
+## 
+##     expand, pack, unpack</code></pre>
+<pre class="r"><code>library(lmerTest)</code></pre>
+<pre><code>## Warning: package &#39;lmerTest&#39; was built under R version 4.5.3</code></pre>
+<pre><code>## 
+## Attaching package: &#39;lmerTest&#39;
+## 
+## The following object is masked from &#39;package:lme4&#39;:
+## 
+##     lmer
+## 
+## The following object is masked from &#39;package:stats&#39;:
+## 
+##     step</code></pre>
+<pre class="r"><code>df &lt;- st_read(&quot;./data/df_analysis.gpkg&quot;)</code></pre>
+<pre><code>## Reading layer `df_analysis&#39; from data source 
+##   `C:\Users\kalle\OneDrive\Documenten\REMA\Thesis\labjournal_thesis_KS\labjournal_thesis_KS\data\df_analysis.gpkg&#39; 
+##   using driver `GPKG&#39;
+## Simple feature collection with 17085 features and 34 fields
+## Geometry type: MULTIPOLYGON
+## Dimension:     XY
+## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
+## Projected CRS: Amersfoort / RD New</code></pre>
+<div id="plots" class="section level2" number="1">
+<h2><span class="header-section-number">1</span> Plots</h2>
+<pre class="r"><code>hist(df$teruglevering)</code></pre>
+<p><img src="First_analyses_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<pre class="r"><code>df |&gt;
+  group_by(year) |&gt;
+  summarise(yearly_avg = mean(teruglevering, na.rm = TRUE)) |&gt;
+  ggplot(aes(x = year, y = yearly_avg)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 2))+
+  theme_minimal()</code></pre>
+<p><img src="First_analyses_files/figure-html/unnamed-chunk-2-2.png" width="672" /></p>
+<p>On a map, using ggplot:</p>
+<pre class="r"><code>df |&gt;
+  filter(year == 2024) |&gt;
+  ggplot(
+    aes(fill = teruglevering)
+  ) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c(option = &quot;plasma&quot;, name = &quot;Energy feed-in&quot;) +
+  theme_minimal()</code></pre>
+<p><img src="First_analyses_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p>Using tmap</p>
+<pre class="r"><code>tmap_mode(&quot;plot&quot;)</code></pre>
+<pre><code>## ℹ tmap modes &quot;plot&quot; - &quot;view&quot;
+## ℹ toggle with `tmap::ttm()`</code></pre>
+<pre class="r"><code>tm_shape(df) +
+  tm_fill(&quot;teruglevering&quot;) +
+  tm_facets(by = &quot;year&quot;)</code></pre>
+<p><img src="First_analyses_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>Calculate spatial autocorrelation over time</p>
+<pre class="r"><code>years &lt;- c(2016:2019, 2022:2024)
+moran_results_list &lt;- list()
+
+for (yr in years) {
+  
+  # Filter for the specific year
+  df_yr &lt;- df |&gt; filter(year == yr)
+    
+    # Create neighbor list
+    nb &lt;- poly2nb(df_yr)
+    
+    # Create weights list
+    lw &lt;- nb2listw(nb, style = &quot;W&quot;, zero.policy = TRUE)
+    
+    # Run Moran&#39;s I test and store it in the list using the year as the name
+    moran_results_list[[as.character(yr)]] &lt;- moran.test(df_yr$teruglevering, 
+                                                         lw, 
+                                                         zero.policy = TRUE)
+    
+}</code></pre>
+<pre><code>## Warning in poly2nb(df_yr): some observations have no neighbours;
+## if this seems unexpected, try increasing the snap argument.</code></pre>
+<pre><code>## Warning in poly2nb(df_yr): neighbour object has 6 sub-graphs;
+## if this sub-graph count seems unexpected, try increasing the snap argument.</code></pre>
+<pre><code>## Warning in poly2nb(df_yr): some observations have no neighbours;
+## if this seems unexpected, try increasing the snap argument.</code></pre>
+<pre><code>## Warning in poly2nb(df_yr): neighbour object has 3 sub-graphs;
+## if this sub-graph count seems unexpected, try increasing the snap argument.</code></pre>
+<pre><code>## Warning in poly2nb(df_yr): some observations have no neighbours;
+## if this seems unexpected, try increasing the snap argument.</code></pre>
+<pre><code>## Warning in poly2nb(df_yr): neighbour object has 3 sub-graphs;
+## if this sub-graph count seems unexpected, try increasing the snap argument.</code></pre>
+<pre><code>## Warning in poly2nb(df_yr): some observations have no neighbours;
+## if this seems unexpected, try increasing the snap argument.</code></pre>
+<pre><code>## Warning in poly2nb(df_yr): neighbour object has 2 sub-graphs;
+## if this sub-graph count seems unexpected, try increasing the snap argument.</code></pre>
+<pre class="r"><code>str(moran_results_list)</code></pre>
+<pre><code>## List of 7
+##  $ 2016:List of 6
+##   ..$ statistic  : Named num 20.4
+##   .. ..- attr(*, &quot;names&quot;)= chr &quot;Moran I statistic standard deviate&quot;
+##   ..$ p.value    : num 7.04e-93
+##   ..$ estimate   : Named num [1:3] 0.229432 -0.000426 0.000127
+##   .. ..- attr(*, &quot;names&quot;)= chr [1:3] &quot;Moran I statistic&quot; &quot;Expectation&quot; &quot;Variance&quot;
+##   ..$ alternative: chr &quot;greater&quot;
+##   ..$ method     : chr &quot;Moran I test under randomisation&quot;
+##   ..$ data.name  : chr &quot;df_yr$teruglevering  \nweights: lw    \n&quot;
+##   ..- attr(*, &quot;class&quot;)= chr &quot;htest&quot;
+##  $ 2017:List of 6
+##   ..$ statistic  : Named num 20.3
+##   .. ..- attr(*, &quot;names&quot;)= chr &quot;Moran I statistic standard deviate&quot;
+##   ..$ p.value    : num 1.5e-91
+##   ..$ estimate   : Named num [1:3] 0.226956 -0.000421 0.000126
+##   .. ..- attr(*, &quot;names&quot;)= chr [1:3] &quot;Moran I statistic&quot; &quot;Expectation&quot; &quot;Variance&quot;
+##   ..$ alternative: chr &quot;greater&quot;
+##   ..$ method     : chr &quot;Moran I test under randomisation&quot;
+##   ..$ data.name  : chr &quot;df_yr$teruglevering  \nweights: lw    \n&quot;
+##   ..- attr(*, &quot;class&quot;)= chr &quot;htest&quot;
+##  $ 2018:List of 6
+##   ..$ statistic  : Named num 23.7
+##   .. ..- attr(*, &quot;names&quot;)= chr &quot;Moran I statistic standard deviate&quot;
+##   ..$ p.value    : num 3.87e-124
+##   ..$ estimate   : Named num [1:3] 0.265515 -0.000416 0.000126
+##   .. ..- attr(*, &quot;names&quot;)= chr [1:3] &quot;Moran I statistic&quot; &quot;Expectation&quot; &quot;Variance&quot;
+##   ..$ alternative: chr &quot;greater&quot;
+##   ..$ method     : chr &quot;Moran I test under randomisation&quot;
+##   ..$ data.name  : chr &quot;df_yr$teruglevering  \nweights: lw    \n&quot;
+##   ..- attr(*, &quot;class&quot;)= chr &quot;htest&quot;
+##  $ 2019:List of 6
+##   ..$ statistic  : Named num 23.2
+##   .. ..- attr(*, &quot;names&quot;)= chr &quot;Moran I statistic standard deviate&quot;
+##   ..$ p.value    : num 7.15e-119
+##   ..$ estimate   : Named num [1:3] 0.258014 -0.000413 0.000125
+##   .. ..- attr(*, &quot;names&quot;)= chr [1:3] &quot;Moran I statistic&quot; &quot;Expectation&quot; &quot;Variance&quot;
+##   ..$ alternative: chr &quot;greater&quot;
+##   ..$ method     : chr &quot;Moran I test under randomisation&quot;
+##   ..$ data.name  : chr &quot;df_yr$teruglevering  \nweights: lw  \nn reduced by no-neighbour observations  \n&quot;
+##   ..- attr(*, &quot;class&quot;)= chr &quot;htest&quot;
+##  $ 2022:List of 6
+##   ..$ statistic  : Named num 26.4
+##   .. ..- attr(*, &quot;names&quot;)= chr &quot;Moran I statistic standard deviate&quot;
+##   ..$ p.value    : num 1.68e-153
+##   ..$ estimate   : Named num [1:3] 0.293889 -0.0004 0.000125
+##   .. ..- attr(*, &quot;names&quot;)= chr [1:3] &quot;Moran I statistic&quot; &quot;Expectation&quot; &quot;Variance&quot;
+##   ..$ alternative: chr &quot;greater&quot;
+##   ..$ method     : chr &quot;Moran I test under randomisation&quot;
+##   ..$ data.name  : chr &quot;df_yr$teruglevering  \nweights: lw  \nn reduced by no-neighbour observations  \n&quot;
+##   ..- attr(*, &quot;class&quot;)= chr &quot;htest&quot;
+##  $ 2023:List of 6
+##   ..$ statistic  : Named num 26.1
+##   .. ..- attr(*, &quot;names&quot;)= chr &quot;Moran I statistic standard deviate&quot;
+##   ..$ p.value    : num 3.28e-150
+##   ..$ estimate   : Named num [1:3] 0.289913 -0.0004 0.000124
+##   .. ..- attr(*, &quot;names&quot;)= chr [1:3] &quot;Moran I statistic&quot; &quot;Expectation&quot; &quot;Variance&quot;
+##   ..$ alternative: chr &quot;greater&quot;
+##   ..$ method     : chr &quot;Moran I test under randomisation&quot;
+##   ..$ data.name  : chr &quot;df_yr$teruglevering  \nweights: lw  \nn reduced by no-neighbour observations  \n&quot;
+##   ..- attr(*, &quot;class&quot;)= chr &quot;htest&quot;
+##  $ 2024:List of 6
+##   ..$ statistic  : Named num 26.8
+##   .. ..- attr(*, &quot;names&quot;)= chr &quot;Moran I statistic standard deviate&quot;
+##   ..$ p.value    : num 6.42e-159
+##   ..$ estimate   : Named num [1:3] 0.298857 -0.000398 0.000124
+##   .. ..- attr(*, &quot;names&quot;)= chr [1:3] &quot;Moran I statistic&quot; &quot;Expectation&quot; &quot;Variance&quot;
+##   ..$ alternative: chr &quot;greater&quot;
+##   ..$ method     : chr &quot;Moran I test under randomisation&quot;
+##   ..$ data.name  : chr &quot;df_yr$teruglevering  \nweights: lw  \nn reduced by no-neighbour observations  \n&quot;
+##   ..- attr(*, &quot;class&quot;)= chr &quot;htest&quot;</code></pre>
+<p>Bivariate plot</p>
+<pre class="r"><code>df |&gt;
+  ggplot(aes(x = nb_pv, y = teruglevering)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth() +
+  theme_minimal() +
+  xlab(&quot;Neighborhood energy feed-in at t-1&quot;) +
+  ylab(&quot;Energy feed-in at t=0&quot;)</code></pre>
+<pre><code>## `geom_smooth()` using method = &#39;gam&#39; and formula = &#39;y ~ s(x, bs =
+## &quot;cs&quot;)&#39;</code></pre>
+<pre><code>## Warning: Removed 1112 rows containing non-finite outside the scale range
+## (`stat_smooth()`).</code></pre>
+<pre><code>## Warning: Removed 1112 rows containing missing values or values outside the
+## scale range (`geom_point()`).</code></pre>
+<p><img src="First_analyses_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+</div>
+<div id="first-models" class="section level2" number="2">
+<h2><span class="header-section-number">2</span> First models</h2>
+<pre class="r"><code>#null-model, ICC = 34.7%. 
+model0 &lt;- lmer(teruglevering ~ (1 | postcode_van), REML = F, data = df)
+summary(model0)</code></pre>
+<pre><code>## Linear mixed model fit by maximum likelihood . t-tests use Satterthwaite&#39;s
+##   method [lmerModLmerTest]
+## Formula: teruglevering ~ (1 | postcode_van)
+##    Data: df
+## 
+##       AIC       BIC    logLik -2*log(L)  df.resid 
+##  148756.8  148780.0  -74375.4  148750.8     17082 
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -3.0143 -0.6358 -0.2172  0.5246  4.8492 
+## 
+## Random effects:
+##  Groups       Name        Variance Std.Dev.
+##  postcode_van (Intercept) 149.9    12.24   
+##  Residual                 282.3    16.80   
+## Number of obs: 17085, groups:  postcode_van, 2595
+## 
+## Fixed effects:
+##              Estimate Std. Error        df t value Pr(&gt;|t|)    
+## (Intercept)   16.8393     0.2743 2290.3020   61.39   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>149.9 / (149.9 + 282.3)</code></pre>
+<pre><code>## [1] 0.3468302</code></pre>
+<pre class="r"><code>#model1 with random interept and fixed effect of time
+model1 &lt;- lmer(teruglevering ~ (1 | postcode_van) + year, REML = F, data = df)
+summary(model1)</code></pre>
+<pre><code>## Linear mixed model fit by maximum likelihood . t-tests use Satterthwaite&#39;s
+##   method [lmerModLmerTest]
+## Formula: teruglevering ~ (1 | postcode_van) + year
+##    Data: df
+## 
+##       AIC       BIC    logLik -2*log(L)  df.resid 
+##  135386.9  135417.9  -67689.5  135378.9     17081 
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -4.1183 -0.6288 -0.0281  0.5679  6.0487 
+## 
+## Random effects:
+##  Groups       Name        Variance Std.Dev.
+##  postcode_van (Intercept) 161.8    12.72   
+##  Residual                 113.8    10.67   
+## Number of obs: 17085, groups:  postcode_van, 2595
+## 
+## Fixed effects:
+##               Estimate Std. Error         df t value Pr(&gt;|t|)    
+## (Intercept) -8.441e+03  5.764e+01  1.455e+04  -146.5   &lt;2e-16 ***
+## year         4.187e+00  2.853e-02  1.455e+04   146.8   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##      (Intr)
+## year -1.000</code></pre>
+<pre class="r"><code>#model2 with random effect of time does not coverge
+
+#model3 with random  intercept and fixed effect of time and nb_pv
+model3 &lt;- lmer(teruglevering ~ (1 | postcode_van) + year + nb_pv, REML = F, data = df)
+summary(model3)</code></pre>
+<pre><code>## Linear mixed model fit by maximum likelihood . t-tests use Satterthwaite&#39;s
+##   method [lmerModLmerTest]
+## Formula: teruglevering ~ (1 | postcode_van) + year + nb_pv
+##    Data: df
+## 
+##       AIC       BIC    logLik -2*log(L)  df.resid 
+##  125566.0  125604.4  -62778.0  125556.0     15968 
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -3.7748 -0.5955 -0.0218  0.5488  6.2366 
+## 
+## Random effects:
+##  Groups       Name        Variance Std.Dev.
+##  postcode_van (Intercept) 138.8    11.78   
+##  Residual                 108.2    10.40   
+## Number of obs: 15973, groups:  postcode_van, 2456
+## 
+## Fixed effects:
+##               Estimate Std. Error         df t value Pr(&gt;|t|)    
+## (Intercept) -4.765e+03  1.082e+02  1.575e+04  -44.03   &lt;2e-16 ***
+## year         2.363e+00  5.365e-02  1.575e+04   44.05   &lt;2e-16 ***
+## nb_pv        6.138e-01  1.521e-02  1.594e+04   40.35   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##       (Intr) year  
+## year  -1.000       
+## nb_pv  0.843 -0.844</code></pre>
+<pre class="r"><code>#model4
+model4 &lt;- lmer(teruglevering ~ (1 + nb_pv | postcode_van) + year + nb_pv, REML = F, data = df)
+summary(model4)</code></pre>
+<pre><code>## Linear mixed model fit by maximum likelihood . t-tests use Satterthwaite&#39;s
+##   method [lmerModLmerTest]
+## Formula: teruglevering ~ (1 + nb_pv | postcode_van) + year + nb_pv
+##    Data: df
+## 
+##       AIC       BIC    logLik -2*log(L)  df.resid 
+##  118394.3  118448.1  -59190.2  118380.3     15966 
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -5.6526 -0.4405 -0.0281  0.3729  6.5901 
+## 
+## Random effects:
+##  Groups       Name        Variance Std.Dev. Corr 
+##  postcode_van (Intercept) 58.845   7.6711        
+##               nb_pv        0.752   0.8672   0.04 
+##  Residual                 49.025   7.0018        
+## Number of obs: 15973, groups:  postcode_van, 2456
+## 
+## Fixed effects:
+##               Estimate Std. Error         df t value Pr(&gt;|t|)    
+## (Intercept) -4.449e+03  9.590e+01  1.397e+04  -46.39   &lt;2e-16 ***
+## year         2.207e+00  4.755e-02  1.397e+04   46.41   &lt;2e-16 ***
+## nb_pv        6.743e-01  2.422e-02  4.229e+03   27.84   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##       (Intr) year  
+## year  -1.000       
+## nb_pv  0.614 -0.615</code></pre>
+<pre class="r"><code>#model4_2
+df &lt;- df |&gt; 
+  mutate(nb_pv_sq = nb_pv^2)
+
+model4_2 &lt;- lmer(teruglevering ~ (1 + nb_pv | postcode_van) + year + nb_pv + nb_pv_sq, REML = F, data = df)
+summary(model4_2)</code></pre>
+<pre><code>## Linear mixed model fit by maximum likelihood . t-tests use Satterthwaite&#39;s
+##   method [lmerModLmerTest]
+## Formula: teruglevering ~ (1 + nb_pv | postcode_van) + year + nb_pv + nb_pv_sq
+##    Data: df
+## 
+##       AIC       BIC    logLik -2*log(L)  df.resid 
+##  118396.3  118457.7  -59190.1  118380.3     15965 
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -5.6534 -0.4401 -0.0281  0.3732  6.5899 
+## 
+## Random effects:
+##  Groups       Name        Variance Std.Dev. Corr 
+##  postcode_van (Intercept) 58.7585  7.665         
+##               nb_pv        0.7517  0.867    0.04 
+##  Residual                 49.0378  7.003         
+## Number of obs: 15973, groups:  postcode_van, 2456
+## 
+## Fixed effects:
+##               Estimate Std. Error         df t value Pr(&gt;|t|)    
+## (Intercept) -4.438e+03  1.028e+02  1.458e+04 -43.175   &lt;2e-16 ***
+## year         2.201e+00  5.098e-02  1.458e+04  43.179   &lt;2e-16 ***
+## nb_pv        6.817e-01  3.488e-02  1.116e+04  19.545   &lt;2e-16 ***
+## nb_pv_sq    -1.878e-04  6.338e-04  1.146e+04  -0.296    0.767    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Correlation of Fixed Effects:
+##          (Intr) year   nb_pv 
+## year     -1.000              
+## nb_pv     0.657 -0.658       
+## nb_pv_sq -0.360  0.361 -0.720</code></pre>
+<pre class="r"><code>model9 &lt;- lmer(scale(teruglevering) ~ (1 + scale(nb_pv) | postcode_van) 
+               + scale(nb_pv) * (
+                + scale(percentage_hoog_inkomen_huishouden)
+                + scale(percentage_laag_inkomen_huishouden)
+                + scale(gemiddelde_woz_waarde_woning)
+                + scale(solar_cost)
+                + scale(electricity_price)
+                + scale(economic_diversity)
+                + scale(ethnic_diversity)
+                + scale(age_diversity)
+                + scale(omgevingsadressendichtheid)
+                + scale(stedelijkheid)
+                + scale(percentage_koopwoningen))
+               + year 
+               + scale(nb_pv)
+               + scale(nb_pv_sq)
+               + scale(percentage_hoog_inkomen_huishouden)
+               + scale(percentage_laag_inkomen_huishouden)
+               + scale(gemiddelde_woz_waarde_woning)
+               + scale(solar_cost)
+               + scale(electricity_price)
+               + scale(economic_diversity)
+               + scale(ethnic_diversity)
+               + scale(age_diversity)
+               + scale(omgevingsadressendichtheid)
+               + scale(stedelijkheid)
+               + scale(percentage_koopwoningen)
+               + scale(percentage_geb_nederland_herkomst_nederland)
+               + scale(age_avg), REML = T, data = df)
+summary(model9)</code></pre>
+<pre><code>## Linear mixed model fit by REML. t-tests use Satterthwaite&#39;s method [
+## lmerModLmerTest]
+## Formula: 
+## scale(teruglevering) ~ (1 + scale(nb_pv) | postcode_van) + scale(nb_pv) *  
+##     (+scale(percentage_hoog_inkomen_huishouden) + scale(percentage_laag_inkomen_huishouden) +  
+##         scale(gemiddelde_woz_waarde_woning) + scale(solar_cost) +  
+##         scale(electricity_price) + scale(economic_diversity) +  
+##         scale(ethnic_diversity) + scale(age_diversity) + scale(omgevingsadressendichtheid) +  
+##         scale(stedelijkheid) + scale(percentage_koopwoningen)) +  
+##     year + scale(nb_pv) + scale(nb_pv_sq) + scale(percentage_hoog_inkomen_huishouden) +  
+##     scale(percentage_laag_inkomen_huishouden) + scale(gemiddelde_woz_waarde_woning) +  
+##     scale(solar_cost) + scale(electricity_price) + scale(economic_diversity) +  
+##     scale(ethnic_diversity) + scale(age_diversity) + scale(omgevingsadressendichtheid) +  
+##     scale(stedelijkheid) + scale(percentage_koopwoningen) + scale(percentage_geb_nederland_herkomst_nederland) +  
+##     scale(age_avg)
+##    Data: df
+## 
+## REML criterion at convergence: 13266.2
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -6.0455 -0.4617 -0.0143  0.4054  6.7857 
+## 
+## Random effects:
+##  Groups       Name         Variance Std.Dev. Corr 
+##  postcode_van (Intercept)  0.27371  0.5232        
+##               scale(nb_pv) 0.18760  0.4331   0.73 
+##  Residual                  0.09226  0.3037        
+## Number of obs: 11232, groups:  postcode_van, 1800
+## 
+## Fixed effects:
+##                                                          Estimate Std. Error
+## (Intercept)                                            -2.233e+02  1.007e+01
+## scale(nb_pv)                                            3.534e-01  2.743e-02
+## scale(percentage_hoog_inkomen_huishouden)              -4.336e-02  1.747e-02
+## scale(percentage_laag_inkomen_huishouden)              -6.582e-02  1.978e-02
+## scale(gemiddelde_woz_waarde_woning)                     3.192e-01  1.584e-02
+## scale(solar_cost)                                      -7.345e-02  1.113e-02
+## scale(electricity_price)                                4.069e-02  5.958e-03
+## scale(economic_diversity)                               5.850e-03  1.138e-02
+## scale(ethnic_diversity)                                 6.902e-03  8.719e-03
+## scale(age_diversity)                                   -5.366e-02  1.913e-02
+## scale(omgevingsadressendichtheid)                       3.697e-02  2.266e-02
+## scale(stedelijkheid)                                    5.970e-02  2.152e-02
+## scale(percentage_koopwoningen)                          9.231e-02  1.191e-02
+## year                                                    1.105e-01  4.983e-03
+## scale(nb_pv_sq)                                        -3.220e-01  2.790e-02
+## scale(percentage_geb_nederland_herkomst_nederland)      2.085e-02  9.346e-03
+## scale(age_avg)                                         -1.817e-02  7.435e-03
+## scale(nb_pv):scale(percentage_hoog_inkomen_huishouden) -7.566e-02  1.541e-02
+## scale(nb_pv):scale(percentage_laag_inkomen_huishouden) -8.590e-02  1.967e-02
+## scale(nb_pv):scale(gemiddelde_woz_waarde_woning)        9.026e-03  1.116e-02
+## scale(nb_pv):scale(solar_cost)                         -1.749e-01  1.041e-02
+## scale(nb_pv):scale(electricity_price)                  -2.893e-02  4.312e-03
+## scale(nb_pv):scale(economic_diversity)                  3.006e-02  1.060e-02
+## scale(nb_pv):scale(ethnic_diversity)                   -1.322e-02  8.334e-03
+## scale(nb_pv):scale(age_diversity)                      -1.214e-01  1.657e-02
+## scale(nb_pv):scale(omgevingsadressendichtheid)         -3.039e-02  2.148e-02
+## scale(nb_pv):scale(stedelijkheid)                      -1.177e-03  2.225e-02
+## scale(nb_pv):scale(percentage_koopwoningen)             1.149e-01  1.071e-02
+##                                                                df t value
+## (Intercept)                                             9.113e+03 -22.187
+## scale(nb_pv)                                            9.232e+03  12.883
+## scale(percentage_hoog_inkomen_huishouden)               6.841e+03  -2.481
+## scale(percentage_laag_inkomen_huishouden)               6.197e+03  -3.327
+## scale(gemiddelde_woz_waarde_woning)                     4.356e+03  20.148
+## scale(solar_cost)                                       8.793e+03  -6.599
+## scale(electricity_price)                                8.045e+03   6.829
+## scale(economic_diversity)                               6.223e+03   0.514
+## scale(ethnic_diversity)                                 1.040e+04   0.792
+## scale(age_diversity)                                    6.468e+03  -2.804
+## scale(omgevingsadressendichtheid)                       5.427e+03   1.632
+## scale(stedelijkheid)                                    9.448e+03   2.774
+## scale(percentage_koopwoningen)                          3.704e+03   7.750
+## year                                                    9.111e+03  22.183
+## scale(nb_pv_sq)                                         9.419e+03 -11.539
+## scale(percentage_geb_nederland_herkomst_nederland)      7.470e+03   2.231
+## scale(age_avg)                                          6.949e+03  -2.444
+## scale(nb_pv):scale(percentage_hoog_inkomen_huishouden)  5.100e+03  -4.909
+## scale(nb_pv):scale(percentage_laag_inkomen_huishouden)  4.008e+03  -4.367
+## scale(nb_pv):scale(gemiddelde_woz_waarde_woning)        4.432e+03   0.809
+## scale(nb_pv):scale(solar_cost)                          1.072e+04 -16.801
+## scale(nb_pv):scale(electricity_price)                   8.881e+03  -6.709
+## scale(nb_pv):scale(economic_diversity)                  4.376e+03   2.834
+## scale(nb_pv):scale(ethnic_diversity)                    8.645e+03  -1.586
+## scale(nb_pv):scale(age_diversity)                       7.308e+03  -7.324
+## scale(nb_pv):scale(omgevingsadressendichtheid)          3.670e+03  -1.415
+## scale(nb_pv):scale(stedelijkheid)                       4.983e+03  -0.053
+## scale(nb_pv):scale(percentage_koopwoningen)             2.276e+03  10.726
+##                                                        Pr(&gt;|t|)    
+## (Intercept)                                             &lt; 2e-16 ***
+## scale(nb_pv)                                            &lt; 2e-16 ***
+## scale(percentage_hoog_inkomen_huishouden)              0.013114 *  
+## scale(percentage_laag_inkomen_huishouden)              0.000882 ***
+## scale(gemiddelde_woz_waarde_woning)                     &lt; 2e-16 ***
+## scale(solar_cost)                                      4.37e-11 ***
+## scale(electricity_price)                               9.16e-12 ***
+## scale(economic_diversity)                              0.607330    
+## scale(ethnic_diversity)                                0.428603    
+## scale(age_diversity)                                   0.005056 ** 
+## scale(omgevingsadressendichtheid)                      0.102792    
+## scale(stedelijkheid)                                   0.005550 ** 
+## scale(percentage_koopwoningen)                         1.18e-14 ***
+## year                                                    &lt; 2e-16 ***
+## scale(nb_pv_sq)                                         &lt; 2e-16 ***
+## scale(percentage_geb_nederland_herkomst_nederland)     0.025686 *  
+## scale(age_avg)                                         0.014549 *  
+## scale(nb_pv):scale(percentage_hoog_inkomen_huishouden) 9.42e-07 ***
+## scale(nb_pv):scale(percentage_laag_inkomen_huishouden) 1.29e-05 ***
+## scale(nb_pv):scale(gemiddelde_woz_waarde_woning)       0.418667    
+## scale(nb_pv):scale(solar_cost)                          &lt; 2e-16 ***
+## scale(nb_pv):scale(electricity_price)                  2.08e-11 ***
+## scale(nb_pv):scale(economic_diversity)                 0.004611 ** 
+## scale(nb_pv):scale(ethnic_diversity)                   0.112795    
+## scale(nb_pv):scale(age_diversity)                      2.66e-13 ***
+## scale(nb_pv):scale(omgevingsadressendichtheid)         0.157102    
+## scale(nb_pv):scale(stedelijkheid)                      0.957802    
+## scale(nb_pv):scale(percentage_koopwoningen)             &lt; 2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre><code>## 
+## Correlation matrix not shown by default, as p = 28 &gt; 12.
+## Use print(x, correlation=TRUE)  or
+##     vcov(x)        if you need it</code></pre>
+</div>
+<div id="future" class="section level2" number="3">
+<h2><span class="header-section-number">3</span> Future</h2>
+<ul>
+<li><p>Check collinearity with time</p></li>
+<li><p>Impute missing data with spatial interpolation?</p></li>
+<li><p>Non-linear interaction effects?</p></li>
+<li><p>How much the variance in nb_pv do I explain?</p></li>
+<li><p>Rescaling method?</p></li>
+</ul>
+</div>
+
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIkZpcnN0IGFuYWx5c2VzIg0KYXV0aG9yOiAiS2FsbGUgU3RvZmZlcnMiDQpkYXRlOiAiMjAyNi0wNC0wNiINCm91dHB1dDogaHRtbF9kb2N1bWVudA0KLS0tDQoNCmBgYHtyIHNldHVwLCBpbmNsdWRlPUZBTFNFfQ0Ka25pdHI6Om9wdHNfY2h1bmskc2V0KGVjaG8gPSBUUlVFKQ0KYGBgDQoNCmBgYHtyfQ0Kcm0obGlzdD1scygpKQ0KDQpsaWJyYXJ5KHRpZHl2ZXJzZSkNCmxpYnJhcnkoc2YpDQpsaWJyYXJ5KHRtYXApDQpsaWJyYXJ5KHNwZGVwKQ0KbGlicmFyeShsbWU0KQ0KbGlicmFyeShsbWVyVGVzdCkNCg0KDQpkZiA8LSBzdF9yZWFkKCIuL2RhdGEvZGZfYW5hbHlzaXMuZ3BrZyIpDQpgYGANCg0KIyMgUGxvdHMNCg0KYGBge3J9DQoNCmhpc3QoZGYkdGVydWdsZXZlcmluZykNCg0KZGYgfD4NCiAgZ3JvdXBfYnkoeWVhcikgfD4NCiAgc3VtbWFyaXNlKHllYXJseV9hdmcgPSBtZWFuKHRlcnVnbGV2ZXJpbmcsIG5hLnJtID0gVFJVRSkpIHw+DQogIGdncGxvdChhZXMoeCA9IHllYXIsIHkgPSB5ZWFybHlfYXZnKSkgKw0KICBnZW9tX2xpbmUoKSArDQogIGdlb21fcG9pbnQoKSArDQogIHNjYWxlX3lfY29udGludW91cyhsaW1pdHMgPSBjKDAsIDEwMCkpICsNCiAgc2NhbGVfeF9jb250aW51b3VzKGJyZWFrcyA9IHNlcShtaW4oZGYkeWVhciksIG1heChkZiR5ZWFyKSwgYnkgPSAyKSkrDQogIHRoZW1lX21pbmltYWwoKQ0KYGBgDQoNCk9uIGEgbWFwLCB1c2luZyBnZ3Bsb3Q6DQoNCmBgYHtyfQ0KZGYgfD4NCiAgZmlsdGVyKHllYXIgPT0gMjAyNCkgfD4NCiAgZ2dwbG90KA0KICAgIGFlcyhmaWxsID0gdGVydWdsZXZlcmluZykNCiAgKSArDQogIGdlb21fc2YoY29sb3IgPSBOQSkgKw0KICBzY2FsZV9maWxsX3ZpcmlkaXNfYyhvcHRpb24gPSAicGxhc21hIiwgbmFtZSA9ICJFbmVyZ3kgZmVlZC1pbiIpICsNCiAgdGhlbWVfbWluaW1hbCgpDQoNCmBgYA0KDQpVc2luZyB0bWFwDQoNCmBgYHtyfQ0KdG1hcF9tb2RlKCJwbG90IikNCg0KdG1fc2hhcGUoZGYpICsNCiAgdG1fZmlsbCgidGVydWdsZXZlcmluZyIpICsNCiAgdG1fZmFjZXRzKGJ5ID0gInllYXIiKQ0KDQoNCmBgYA0KDQpDYWxjdWxhdGUgc3BhdGlhbCBhdXRvY29ycmVsYXRpb24gb3ZlciB0aW1lDQoNCmBgYHtyfQ0KeWVhcnMgPC0gYygyMDE2OjIwMTksIDIwMjI6MjAyNCkNCm1vcmFuX3Jlc3VsdHNfbGlzdCA8LSBsaXN0KCkNCg0KZm9yICh5ciBpbiB5ZWFycykgew0KICANCiAgIyBGaWx0ZXIgZm9yIHRoZSBzcGVjaWZpYyB5ZWFyDQogIGRmX3lyIDwtIGRmIHw+IGZpbHRlcih5ZWFyID09IHlyKQ0KICAgIA0KICAgICMgQ3JlYXRlIG5laWdoYm9yIGxpc3QNCiAgICBuYiA8LSBwb2x5Mm5iKGRmX3lyKQ0KICAgIA0KICAgICMgQ3JlYXRlIHdlaWdodHMgbGlzdA0KICAgIGx3IDwtIG5iMmxpc3R3KG5iLCBzdHlsZSA9ICJXIiwgemVyby5wb2xpY3kgPSBUUlVFKQ0KICAgIA0KICAgICMgUnVuIE1vcmFuJ3MgSSB0ZXN0IGFuZCBzdG9yZSBpdCBpbiB0aGUgbGlzdCB1c2luZyB0aGUgeWVhciBhcyB0aGUgbmFtZQ0KICAgIG1vcmFuX3Jlc3VsdHNfbGlzdFtbYXMuY2hhcmFjdGVyKHlyKV1dIDwtIG1vcmFuLnRlc3QoZGZfeXIkdGVydWdsZXZlcmluZywgDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsdywgDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB6ZXJvLnBvbGljeSA9IFRSVUUpDQogICAgDQp9DQoNCnN0cihtb3Jhbl9yZXN1bHRzX2xpc3QpDQpgYGANCg0KQml2YXJpYXRlIHBsb3QNCg0KYGBge3J9DQpkZiB8Pg0KICBnZ3Bsb3QoYWVzKHggPSBuYl9wdiwgeSA9IHRlcnVnbGV2ZXJpbmcpKSArDQogIGdlb21fcG9pbnQoYWxwaGEgPSAwLjIpICsNCiAgZ2VvbV9zbW9vdGgoKSArDQogIHRoZW1lX21pbmltYWwoKSArDQogIHhsYWIoIk5laWdoYm9yaG9vZCBlbmVyZ3kgZmVlZC1pbiBhdCB0LTEiKSArDQogIHlsYWIoIkVuZXJneSBmZWVkLWluIGF0IHQ9MCIpDQpgYGANCg0KIyMgRmlyc3QgbW9kZWxzDQoNCmBgYHtyfQ0KI251bGwtbW9kZWwsIElDQyA9IDM0LjclLiANCm1vZGVsMCA8LSBsbWVyKHRlcnVnbGV2ZXJpbmcgfiAoMSB8IHBvc3Rjb2RlX3ZhbiksIFJFTUwgPSBGLCBkYXRhID0gZGYpDQpzdW1tYXJ5KG1vZGVsMCkNCjE0OS45IC8gKDE0OS45ICsgMjgyLjMpDQoNCiNtb2RlbDEgd2l0aCByYW5kb20gaW50ZXJlcHQgYW5kIGZpeGVkIGVmZmVjdCBvZiB0aW1lDQptb2RlbDEgPC0gbG1lcih0ZXJ1Z2xldmVyaW5nIH4gKDEgfCBwb3N0Y29kZV92YW4pICsgeWVhciwgUkVNTCA9IEYsIGRhdGEgPSBkZikNCnN1bW1hcnkobW9kZWwxKQ0KDQojbW9kZWwyIHdpdGggcmFuZG9tIGVmZmVjdCBvZiB0aW1lIGRvZXMgbm90IGNvdmVyZ2UNCg0KI21vZGVsMyB3aXRoIHJhbmRvbSAgaW50ZXJjZXB0IGFuZCBmaXhlZCBlZmZlY3Qgb2YgdGltZSBhbmQgbmJfcHYNCm1vZGVsMyA8LSBsbWVyKHRlcnVnbGV2ZXJpbmcgfiAoMSB8IHBvc3Rjb2RlX3ZhbikgKyB5ZWFyICsgbmJfcHYsIFJFTUwgPSBGLCBkYXRhID0gZGYpDQpzdW1tYXJ5KG1vZGVsMykNCg0KI21vZGVsNA0KbW9kZWw0IDwtIGxtZXIodGVydWdsZXZlcmluZyB+ICgxICsgbmJfcHYgfCBwb3N0Y29kZV92YW4pICsgeWVhciArIG5iX3B2LCBSRU1MID0gRiwgZGF0YSA9IGRmKQ0Kc3VtbWFyeShtb2RlbDQpDQoNCg0KI21vZGVsNF8yDQpkZiA8LSBkZiB8PiANCiAgbXV0YXRlKG5iX3B2X3NxID0gbmJfcHZeMikNCg0KbW9kZWw0XzIgPC0gbG1lcih0ZXJ1Z2xldmVyaW5nIH4gKDEgKyBuYl9wdiB8IHBvc3Rjb2RlX3ZhbikgKyB5ZWFyICsgbmJfcHYgKyBuYl9wdl9zcSwgUkVNTCA9IEYsIGRhdGEgPSBkZikNCnN1bW1hcnkobW9kZWw0XzIpDQoNCg0KYGBgDQoNCmBgYHtyfQ0KDQptb2RlbDkgPC0gbG1lcihzY2FsZSh0ZXJ1Z2xldmVyaW5nKSB+ICgxICsgc2NhbGUobmJfcHYpIHwgcG9zdGNvZGVfdmFuKSANCiAgICAgICAgICAgICAgICsgc2NhbGUobmJfcHYpICogKA0KICAgICAgICAgICAgICAgICsgc2NhbGUocGVyY2VudGFnZV9ob29nX2lua29tZW5faHVpc2hvdWRlbikNCiAgICAgICAgICAgICAgICArIHNjYWxlKHBlcmNlbnRhZ2VfbGFhZ19pbmtvbWVuX2h1aXNob3VkZW4pDQogICAgICAgICAgICAgICAgKyBzY2FsZShnZW1pZGRlbGRlX3dvel93YWFyZGVfd29uaW5nKQ0KICAgICAgICAgICAgICAgICsgc2NhbGUoc29sYXJfY29zdCkNCiAgICAgICAgICAgICAgICArIHNjYWxlKGVsZWN0cmljaXR5X3ByaWNlKQ0KICAgICAgICAgICAgICAgICsgc2NhbGUoZWNvbm9taWNfZGl2ZXJzaXR5KQ0KICAgICAgICAgICAgICAgICsgc2NhbGUoZXRobmljX2RpdmVyc2l0eSkNCiAgICAgICAgICAgICAgICArIHNjYWxlKGFnZV9kaXZlcnNpdHkpDQogICAgICAgICAgICAgICAgKyBzY2FsZShvbWdldmluZ3NhZHJlc3NlbmRpY2h0aGVpZCkNCiAgICAgICAgICAgICAgICArIHNjYWxlKHN0ZWRlbGlqa2hlaWQpDQogICAgICAgICAgICAgICAgKyBzY2FsZShwZXJjZW50YWdlX2tvb3B3b25pbmdlbikpDQogICAgICAgICAgICAgICArIHllYXIgDQogICAgICAgICAgICAgICArIHNjYWxlKG5iX3B2KQ0KICAgICAgICAgICAgICAgKyBzY2FsZShuYl9wdl9zcSkNCiAgICAgICAgICAgICAgICsgc2NhbGUocGVyY2VudGFnZV9ob29nX2lua29tZW5faHVpc2hvdWRlbikNCiAgICAgICAgICAgICAgICsgc2NhbGUocGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbikNCiAgICAgICAgICAgICAgICsgc2NhbGUoZ2VtaWRkZWxkZV93b3pfd2FhcmRlX3dvbmluZykNCiAgICAgICAgICAgICAgICsgc2NhbGUoc29sYXJfY29zdCkNCiAgICAgICAgICAgICAgICsgc2NhbGUoZWxlY3RyaWNpdHlfcHJpY2UpDQogICAgICAgICAgICAgICArIHNjYWxlKGVjb25vbWljX2RpdmVyc2l0eSkNCiAgICAgICAgICAgICAgICsgc2NhbGUoZXRobmljX2RpdmVyc2l0eSkNCiAgICAgICAgICAgICAgICsgc2NhbGUoYWdlX2RpdmVyc2l0eSkNCiAgICAgICAgICAgICAgICsgc2NhbGUob21nZXZpbmdzYWRyZXNzZW5kaWNodGhlaWQpDQogICAgICAgICAgICAgICArIHNjYWxlKHN0ZWRlbGlqa2hlaWQpDQogICAgICAgICAgICAgICArIHNjYWxlKHBlcmNlbnRhZ2Vfa29vcHdvbmluZ2VuKQ0KICAgICAgICAgICAgICAgKyBzY2FsZShwZXJjZW50YWdlX2dlYl9uZWRlcmxhbmRfaGVya29tc3RfbmVkZXJsYW5kKQ0KICAgICAgICAgICAgICAgKyBzY2FsZShhZ2VfYXZnKSwgUkVNTCA9IFQsIGRhdGEgPSBkZikNCnN1bW1hcnkobW9kZWw5KQ0KYGBgDQoNCiMjIEZ1dHVyZQ0KDQotICAgQ2hlY2sgY29sbGluZWFyaXR5IHdpdGggdGltZQ0KDQotICAgSW1wdXRlIG1pc3NpbmcgZGF0YSB3aXRoIHNwYXRpYWwgaW50ZXJwb2xhdGlvbj8NCg0KLSAgIE5vbi1saW5lYXIgaW50ZXJhY3Rpb24gZWZmZWN0cz8NCg0KLSAgIEhvdyBtdWNoIHRoZSB2YXJpYW5jZSBpbiBuYl9wdiBkbyBJIGV4cGxhaW4/DQoNCi0gICBSZXNjYWxpbmcgbWV0aG9kPw0K</div>
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeSourceEmbed("First_analyses.Rmd");
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

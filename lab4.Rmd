@@ -1,0 +1,62 @@
+---
+title: "lab4"
+author: "Kalle Stoffers"
+date: "2026-03-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval=F)
+```
+
+## First analyses
+
+Relevant packages
+
+```{r}
+rm(list=ls())
+
+library(tidyverse)
+```
+
+Small Rsiena model??
+
+```{r}
+library(RSiena)
+
+id <- c(1,1,1, 2,2,2, 3,3,3)
+year <- c(1,2,3, 1,2,3, 1,2,3)
+pv <- c(0,0,1, 0,1,1, 1,1,1)
+ses <- c(8,7,8, 2,3,3, 3,4,5)
+ex_df <- tibble(id, year, pv, ses)
+
+adj_matrix <- matrix(c(0, 1, 0,  
+                       1, 0, 1,  
+                       0, 1, 0),
+                     nrow = 3, 
+                     ncol = 3, 
+                     byrow = TRUE))
+
+matrix_w1 <- adj_matrix
+matrix_w2 <- adj_matrix
+matrix_w3 <- adj_matrix
+
+net_array <- array(data = c(matrix_w1, matrix_w2, matrix_w3), dim = c(dim(matrix_w1), 3))
+net <- sienaDependent(net_array)
+
+pv_matrix <- matrix(ex_df$pv, nrow = 3, ncol = 3, byrow = TRUE)
+pv_matrix
+pv <- sienaDependent(pv_matrix, type = "behavior")
+
+ses_matrix <- pv_matrix <- matrix(ex_df$ses, nrow = 3, ncol = 3, byrow = TRUE)
+ses_matrix
+ses <- varCovar(ses_matrix)
+
+mydata <- sienaDataCreate(net, pv, ses)
+myeff <- getEffects(mydata)
+
+print01Report(mydata, modelname = "./results/test_init")
+
+myeff <- includeEffects(myeff, )
+
+```

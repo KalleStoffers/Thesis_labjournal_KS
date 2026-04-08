@@ -353,7 +353,10 @@ div.tocify {
       <a href="lab2.html">Page 2</a>
     </li>
     <li>
-      <a href="lab3.html">Page 3</a>
+      <a href="Preparing_data_clean.html">Page 3</a>
+    </li>
+    <li>
+      <a href="First_analyses.html">Page 4</a>
     </li>
   </ul>
 </li>
@@ -397,48 +400,27 @@ div.tocify {
 <pre class="r"><code>rm(list=ls())
 
 library(tidyverse)
-library(sf)</code></pre>
-<pre><code>## Warning: package &#39;sf&#39; was built under R version 4.5.2</code></pre>
-<pre><code>## Linking to GEOS 3.13.1, GDAL 3.11.4, PROJ 9.7.0; sf_use_s2() is TRUE</code></pre>
-<pre class="r"><code>library(tmap)</code></pre>
-<pre><code>## Warning: package &#39;tmap&#39; was built under R version 4.5.2</code></pre>
-<pre class="r"><code>library(spdep)</code></pre>
-<pre><code>## Warning: package &#39;spdep&#39; was built under R version 4.5.2</code></pre>
-<pre><code>## Loading required package: spData</code></pre>
-<pre><code>## Warning: package &#39;spData&#39; was built under R version 4.5.2</code></pre>
-<pre><code>## To access larger datasets in this package, install the spDataLarge
-## package with: `install.packages(&#39;spDataLarge&#39;,
-## repos=&#39;https://nowosad.github.io/drat/&#39;, type=&#39;source&#39;)`</code></pre>
+library(sf)
+library(tmap)
+library(spdep)
+library(TTR)</code></pre>
 <pre class="r"><code>df &lt;- st_read(dsn = &quot;./data/merged_data.gpkg&quot;)</code></pre>
-<pre><code>## Reading layer `merged_data&#39; from data source 
-##   `C:\Users\kalle\OneDrive\Documenten\REMA\Thesis\labjournal_thesis_KS\labjournal_thesis_KS\data\merged_data.gpkg&#39; 
-##   using driver `GPKG&#39;
-## Simple feature collection with 20163 features and 38 fields
-## Geometry type: MULTIPOLYGON
-## Dimension:     XY
-## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
-## Projected CRS: Amersfoort / RD New</code></pre>
 <p>Looking at the solar panel data again</p>
 <pre class="r"><code>#leveringsrichting from character to numeric
-class(df$leveringsrichting)</code></pre>
-<pre><code>## [1] &quot;character&quot;</code></pre>
-<pre class="r"><code>df$leveringsrichting &lt;- as.numeric(gsub(&quot;,&quot;, &quot;.&quot;, df$leveringsrichting))
+class(df$leveringsrichting)
+df$leveringsrichting &lt;- as.numeric(gsub(&quot;,&quot;, &quot;.&quot;, df$leveringsrichting))
 
 #reverse 
 df&lt;- df|&gt; mutate(teruglevering = 100 - leveringsrichting)
-summary(df$teruglevering)</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-##    0.00    0.00    6.67   15.32   23.81  100.00</code></pre>
-<pre class="r"><code>hist(df$teruglevering)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
-<pre class="r"><code>df %&gt;% filter(teruglevering != 0) %&gt;% nrow()</code></pre>
-<pre><code>## [1] 12819</code></pre>
-<pre class="r"><code>#dichotomous variable
+summary(df$teruglevering)
+hist(df$teruglevering)
+df %&gt;% filter(teruglevering != 0) %&gt;% nrow()
+
+#dichotomous variable
 df &lt;- df |&gt; mutate (teruglevering_d = if_else(teruglevering&gt;0, 1, 0))
-summary(df$teruglevering_d)</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-##  0.0000  0.0000  1.0000  0.6358  1.0000  1.0000</code></pre>
-<pre class="r"><code>#plots over time
+summary(df$teruglevering_d)
+
+#plots over time
 df |&gt;
   group_by(year) |&gt;
   summarise(yearly_avg = mean(teruglevering, na.rm = TRUE)) |&gt;
@@ -447,9 +429,9 @@ df |&gt;
   geom_point() +
   scale_y_continuous(limits = c(0, 100)) +
   scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 2))+
-  theme_minimal()</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-3-2.png" width="672" /></p>
-<pre class="r"><code>#dichotomous
+  theme_minimal()
+
+#dichotomous
 df |&gt;
   group_by(year) |&gt;
   summarise(yearly_avg = mean(teruglevering_d, na.rm = TRUE) * 100) |&gt;
@@ -459,7 +441,6 @@ df |&gt;
   scale_y_continuous(limits = c(0, 100)) +
   scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 2))+
   theme_minimal()</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-3-3.png" width="672" /></p>
 <p>Let’s plot the data on a map using ggplot.</p>
 <pre class="r"><code>#plot the data
 df |&gt;
@@ -470,132 +451,352 @@ df |&gt;
   geom_sf(color = NA) +
   scale_fill_viridis_c(option = &quot;plasma&quot;, name = &quot;Energy feed-in&quot;) +
   theme_minimal()</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
 <p>Now we have only mapped the data for a single year. Now, we create a
 map of all the years using tmap:</p>
-<pre class="r"><code>tmap_mode(&quot;plot&quot;)</code></pre>
-<pre><code>## ℹ tmap modes &quot;plot&quot; - &quot;view&quot;
-## ℹ toggle with `tmap::ttm()`</code></pre>
-<pre class="r"><code>tm_shape(df) +
+<pre class="r"><code>tmap_mode(&quot;plot&quot;)
+
+tm_shape(df) +
   tm_fill(&quot;teruglevering&quot;) +
   tm_facets(by = &quot;year&quot;)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
-<p>Looking at relevant variables. High levels of missingness in the
-data! Maybe I can use spatial + temporal interpolation to impute the
-data?</p>
-<pre class="r"><code>## ethniticity
-summary(df$percentage_geb_nederland_herkomst_nederland) #565 NAs</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
-##   5.455  80.000  90.000  84.363  90.000 100.000     565</code></pre>
-<pre class="r"><code>sum(
-    is.na(df$percentage_geb_nederland_herkomst_nederland) &amp; 
-    is.na(df$percentage_geb_nederland_herkomst_overig_europa) &amp; 
-    is.na(df$percentage_geb_nederland_herkomst_buiten_europa) &amp; 
-    is.na(df$percentage_geb_buiten_nederland_herkomst_europa) &amp;
-    is.na(df$percentage_geb_buiten_nederland_herkmst_buiten_europa) &amp;
-    is.na(df$percentage_westerse_migr_achtergr) &amp;
-    is.na(df$percentage_niet_westerse_migr_achtergr)  
-    ) #533 truly missing, 32 likely value close to 0. </code></pre>
-<pre><code>## [1] 533</code></pre>
-<pre class="r"><code>hist(df$percentage_geb_nederland_herkomst_nederland)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
-<pre class="r"><code>## home ownership
-summary(df$percentage_koopwoningen) #4836 NAs</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
-##    10.0    80.0    90.0    83.7   100.0   100.0    4836</code></pre>
-<pre class="r"><code>df |&gt; filter(is.na(percentage_koopwoningen) &amp; is.na(percentage_huurwoningen)) |&gt; summarise(count = n()) #3958 of those have missing value on both rented and owned homes</code></pre>
-<pre><code>## Simple feature collection with 1 feature and 1 field
-## Geometry type: MULTIPOLYGON
-## Dimension:     XY
-## Bounding box:  xmin: 68730.71 ymin: 437747.8 xmax: 84877.15 ymax: 450662.6
-## Projected CRS: Amersfoort / RD New
-##   count                           geom
-## 1  3958 MULTIPOLYGON (((70500.13 44...</code></pre>
-<pre class="r"><code>df |&gt; filter(is.na(percentage_koopwoningen) &amp; !is.na(percentage_huurwoningen)) |&gt; summarise(count = n()) #878 streets likely have close to 0 home ownership</code></pre>
-<pre><code>## Simple feature collection with 1 feature and 1 field
-## Geometry type: MULTIPOLYGON
-## Dimension:     XY
-## Bounding box:  xmin: 70538.6 ymin: 438776.5 xmax: 83276.29 ymax: 450259.5
-## Projected CRS: Amersfoort / RD New
-##   count                           geom
-## 1   878 MULTIPOLYGON (((70560.21 44...</code></pre>
+<p>Calculating the installed base effect.</p>
+<pre class="r"><code>#calculate the weighted sum of energy feed-in per 500m square per year.
+avg_500 &lt;- df |&gt;
+  st_drop_geometry() |&gt;
+  group_by(crs28992res500m, year) |&gt;
+  summarise(
+    sum_teruglevering = sum((teruglevering * aantal_part_huishoudens), na.rm = TRUE),
+    n_hh = sum(aantal_part_huishoudens),
+    .groups = &quot;drop&quot;
+  )
+
+#select ego info at t-1
+ego_t_minus_one &lt;- df |&gt;
+  st_drop_geometry() |&gt; 
+  rename(teruglevering_t_minus_one = teruglevering,
+         huishoudens_t_minus_one = aantal_part_huishoudens,
+         crs28992res500m_t_minus_one = crs28992res500m) |&gt; 
+  select(postcode_van, year, crs28992res500m_t_minus_one, teruglevering_t_minus_one, huishoudens_t_minus_one)
+
+
+#add the information at t-1 and making neighborhood average without &quot;ego&quot;. 
+df &lt;- df |&gt;
+  mutate(year_t_minus_one = year - 1) |&gt;
+  
+  left_join(ego_t_minus_one,
+            by = join_by(postcode_van, year_t_minus_one == year)) |&gt;
+  #t-1
+  left_join(avg_500,
+            by = join_by(crs28992res500m_t_minus_one == crs28992res500m, year_t_minus_one == year)) |&gt;
+  #t0
+  left_join(avg_500 |&gt; rename(sum_teruglevering_t0 = sum_teruglevering, n_t0 = n_hh),
+            by = join_by(crs28992res500m == crs28992res500m, year == year)) |&gt;
+  
+  mutate(nb_pv = ifelse(
+    is.na(huishoudens_t_minus_one),
+    #use t0 if previous year not available
+    (sum_teruglevering_t0 - (teruglevering * aantal_part_huishoudens)) / 
+      (n_t0 - aantal_part_huishoudens),
+    #use t-1 as default
+    (sum_teruglevering - (teruglevering_t_minus_one * huishoudens_t_minus_one)) /
+      (n_hh - huishoudens_t_minus_one))) 
+  
+
+#delete rows with zero residents
+df &lt;- df |&gt; filter(aantal_inwoners != 0)
+
+#descriptives
+summary(df$teruglevering)
+summary(df$nb_pv)
+
+df |&gt;
+  filter(is.na(nb_pv)) |&gt;
+  st_drop_geometry() |&gt;
+  count(year)
+
+#The remaining 1293 missing are the only streets in a square
+df |&gt;
+  st_drop_geometry() |&gt;
+  filter(is.na(nb_pv)) |&gt;
+  mutate(alone_in_square = case_when(
+    # default t-1 option
+    !is.na(huishoudens_t_minus_one) ~ n_hh == huishoudens_t_minus_one,
+    # when using t0 info
+    is.na(huishoudens_t_minus_one) ~ n_t0 == aantal_part_huishoudens
+  )) |&gt;
+  count(alone_in_square)</code></pre>
+<p>Make function to impute missing data in certain years based on the
+exponential moving average of that street</p>
+<pre class="r"><code>df &lt;- df |&gt; arrange(postcode_van, year)
+
+impute_ema &lt;- function(df, target_year, history_years, var) {
+  imputed &lt;- df |&gt;
+    filter(is.na({{ var }}) &amp; year == target_year) |&gt;
+    pull(postcode_van) |&gt;
+    unique() |&gt;
+    sapply(function(pc) {
+      hist_values &lt;- df |&gt;
+        filter(postcode_van == pc, year %in% history_years) |&gt;
+        arrange(year) |&gt;
+        pull({{ var }}) |&gt;
+        na.omit()
+      
+      if (length(hist_values) == 0 || all(is.na(hist_values))) {
+        NA_real_
+      } else if (length(hist_values) == 1) {
+        hist_values[1]
+      } else {
+        tail(EMA(hist_values, 2), 1)
+      }
+    }) |&gt;
+    enframe(name = &quot;postcode_van&quot;, value = &quot;imputed_value&quot;)
+  
+  df |&gt;
+    left_join(imputed, by = &quot;postcode_van&quot;) |&gt;
+    mutate({{ var }} := case_when(
+      is.na({{ var }}) &amp; year == target_year ~ imputed_value,
+      .default = {{ var }}
+    )) |&gt;
+    select(-imputed_value)
+}</code></pre>
+<p>Impute missing years</p>
 <pre class="r"><code>df |&gt; 
   group_by(year) |&gt; 
-  summarise(missing_count = sum(is.na(percentage_koopwoningen))) # about 600 NAs in every year</code></pre>
-<pre><code>## Simple feature collection with 8 features and 2 fields
-## Geometry type: MULTIPOLYGON
-## Dimension:     XY
-## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
-## Projected CRS: Amersfoort / RD New
-## # A tibble: 8 × 3
-##    year missing_count                                                       geom
-##   &lt;dbl&gt;         &lt;int&gt;                                         &lt;MULTIPOLYGON [m]&gt;
-## 1  2015           602 (((67757 443783, 67716 443803, 67675 443824, 67614 443854…
-## 2  2016           598 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
-## 3  2017           593 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
-## 4  2018           626 (((65359.35 444766.2, 65065.21 444883.1, 65041.03 444892.…
-## 5  2021           599 (((70474.74 442709, 70479.05 442709.9, 70566.63 442708.8,…
-## 6  2022           597 (((65751.47 443924.7, 65101.49 444222.6, 65225.73 444465.…
-## 7  2023           605 (((66528.16 443833.8, 66261.06 443820.9, 65860.24 443874.…
-## 8  2024           616 (((69860.34 442970, 69859.23 442986.6, 69861.07 442997.3,…</code></pre>
-<pre class="r"><code>hist(df$percentage_koopwoningen)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-6-2.png" width="672" /></p>
-<pre class="r"><code>## property value
-summary(df$gemiddelde_woz_waarde_woning) #6219 NAs</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
-##    58.0   224.0   298.0   325.5   391.0  1374.0    6219</code></pre>
-<pre class="r"><code>df |&gt; 
+  summarise(missing_count = sum(is.na(percentage_hoog_inkomen_huishouden) &amp; is.na(percentage_laag_inkomen_huishouden)))
+
+df |&gt; 
   group_by(year) |&gt; 
-  summarise(missing_count = sum(is.na(gemiddelde_woz_waarde_woning))) #no data in 2015 and 2024</code></pre>
-<pre><code>## Simple feature collection with 8 features and 2 fields
-## Geometry type: MULTIPOLYGON
-## Dimension:     XY
-## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
-## Projected CRS: Amersfoort / RD New
-## # A tibble: 8 × 3
-##    year missing_count                                                       geom
-##   &lt;dbl&gt;         &lt;int&gt;                                         &lt;MULTIPOLYGON [m]&gt;
-## 1  2015          2422 (((67757 443783, 67716 443803, 67675 443824, 67614 443854…
-## 2  2016           128 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
-## 3  2017           252 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
-## 4  2018           310 (((65359.35 444766.2, 65065.21 444883.1, 65041.03 444892.…
-## 5  2021           301 (((70474.74 442709, 70479.05 442709.9, 70566.63 442708.8,…
-## 6  2022            91 (((65751.47 443924.7, 65101.49 444222.6, 65225.73 444465.…
-## 7  2023            90 (((66528.16 443833.8, 66261.06 443820.9, 65860.24 443874.…
-## 8  2024          2625 (((69860.34 442970, 69859.23 442986.6, 69861.07 442997.3,…</code></pre>
-<pre class="r"><code>hist(df$gemiddelde_woz_waarde_woning)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-6-3.png" width="672" /></p>
+  summarise(missing_count = sum(is.na(gemiddelde_woz_waarde_woning)))
+
+df |&gt; 
+  group_by(year) |&gt; 
+  summarise(missing_count = sum(is.na(gemiddeld_elektriciteitsverbruik_woning)))
+
+
+df &lt;- df |&gt;
+  impute_ema(target_year = 2023, history_years = c(2021, 2022), var = percentage_laag_inkomen_huishouden) |&gt;
+  impute_ema(target_year = 2024, history_years = c(2022, 2023), var = percentage_laag_inkomen_huishouden) |&gt;
+  impute_ema(target_year = 2023, history_years = c(2021, 2022), var = percentage_hoog_inkomen_huishouden) |&gt;
+  impute_ema(target_year = 2024, history_years = c(2022, 2023), var = percentage_hoog_inkomen_huishouden) |&gt;
+  impute_ema(target_year = 2015, history_years = c(2017, 2016), var = gemiddelde_woz_waarde_woning) |&gt;
+  impute_ema(target_year = 2024, history_years = c(2022, 2023), var = gemiddelde_woz_waarde_woning) |&gt;
+  impute_ema(target_year = 2024, history_years = c(2022, 2023), var = gemiddeld_elektriciteitsverbruik_woning)</code></pre>
+<p>Calculating diversity measures: Herfindahl index.</p>
+<pre class="r"><code>##economic diversity
+df &lt;- df |&gt;
+  mutate(
+    economic_diversity = 1 - ((percentage_hoog_inkomen_huishouden^2 +
+                                 percentage_laag_inkomen_huishouden^2 + 
+                                 (100 - percentage_hoog_inkomen_huishouden - percentage_laag_inkomen_huishouden)^2
+                                  ) 
+         / 10000 
+                                 )
+         )
+
+summary(df$economic_diversity)
+
+##ethnic diversity 
+
+df &lt;- df |&gt;
+  mutate(
+    ethnic_diversity = 1 - ((percentage_geb_nederland_herkomst_nederland_500^2 + (100 - percentage_geb_nederland_herkomst_nederland_500)^2) / 10000)
+  )
+
+summary(df$ethnic_diversity)
+
+df |&gt; 
+  group_by(year) |&gt; 
+  summarise(missing_count = sum(is.na(ethnic_diversity)))
+
+##age diversity
+
+#set number in age category to 0 if the total number of people is not missing
+df &lt;- df |&gt;
+  mutate(
+    aantal_inwoners_0_tot_15_jaar_500 = if_else(
+      is.na(aantal_inwoners_0_tot_15_jaar_500) &amp; !is.na(aantal_inwoners_500),
+      0,
+      aantal_inwoners_0_tot_15_jaar_500
+    ),
+    aantal_inwoners_15_tot_25_jaar_500 = if_else(
+      is.na(aantal_inwoners_15_tot_25_jaar_500) &amp; !is.na(aantal_inwoners_500),
+      0,
+      aantal_inwoners_15_tot_25_jaar_500
+    ),
+    aantal_inwoners_25_tot_45_jaar_500 = if_else(
+      is.na(aantal_inwoners_25_tot_45_jaar_500) &amp; !is.na(aantal_inwoners_500),
+      0,
+      aantal_inwoners_25_tot_45_jaar_500
+    ),
+    aantal_inwoners_45_tot_65_jaar_500 = if_else(
+      is.na(aantal_inwoners_45_tot_65_jaar_500) &amp; !is.na(aantal_inwoners_500),
+      0,
+      aantal_inwoners_45_tot_65_jaar_500
+    ),
+    aantal_inwoners_65_jaar_en_ouder_500 = if_else(
+      is.na(aantal_inwoners_65_jaar_en_ouder_500) &amp; !is.na(aantal_inwoners_500),
+      0,
+      aantal_inwoners_65_jaar_en_ouder_500
+    )
+  )
+
+#calculate proportions
+df &lt;- df |&gt;
+  mutate(
+    percentage_inwoners_0_tot_15_jaar_500 = aantal_inwoners_0_tot_15_jaar_500 / aantal_inwoners_500,
+    percentage_inwoners_15_tot_25_jaar_500 = aantal_inwoners_15_tot_25_jaar_500 / aantal_inwoners_500,
+    percentage_inwoners_25_tot_45_jaar_500 = aantal_inwoners_25_tot_45_jaar_500 / aantal_inwoners_500,
+    percentage_inwoners_45_tot_65_jaar_500 = aantal_inwoners_45_tot_65_jaar_500 / aantal_inwoners_500,
+    percentage_inwoners_65_jaar_en_ouder_500 = aantal_inwoners_65_jaar_en_ouder_500 / aantal_inwoners_500,
+  )
+
+df &lt;- df |&gt;
+  mutate(
+    age_diversity = 1 - (percentage_inwoners_0_tot_15_jaar_500^2 +
+                    percentage_inwoners_15_tot_25_jaar_500^2 +
+                    percentage_inwoners_25_tot_45_jaar_500^2 +
+                    percentage_inwoners_45_tot_65_jaar_500^2 +
+                    percentage_inwoners_65_jaar_en_ouder_500^2)
+  )
+
+
+summary(df$age_diversity)
+
+df |&gt; 
+  group_by(year) |&gt; 
+  summarise(missing_count = sum(is.na(age_diversity)))</code></pre>
+<p>Add data on solar panel prices (source: <a
+href="https://www.irena.org/Data/View-data-by-topic/Costs/Solar-costs"
+class="uri">https://www.irena.org/Data/View-data-by-topic/Costs/Solar-costs</a>)</p>
+<pre class="r"><code>df &lt;- df |&gt;
+  mutate(solar_cost = case_when(
+    year == 2015 ~ NA,
+    year == 2016 ~ 0.1291,
+    year == 2017 ~ 0.1430,
+    year == 2018 ~ 0.1092,
+    year == 2019 ~ 0.1040,
+    year == 2020 ~ 0.1006,
+    year == 2021 ~ 0.0836,
+    year == 2022 ~ 0.0912,
+    year == 2023 ~ 0.0699,
+    year == 2024 ~ NA
+  ))
+
+df &lt;- df |&gt;
+    impute_ema(target_year = 2015, history_years = c(2017, 2016), var = solar_cost) |&gt;
+    impute_ema(target_year = 2024, history_years = c(2022, 2023), var = solar_cost)
+  
+summary(df$solar_cost)</code></pre>
+<p>Looking at descriptives.</p>
+<pre class="r"><code>## income
+summary(df$percentage_laag_inkomen_huishouden)
+hist(df$percentage_laag_inkomen_huishouden)
+
+summary(df$percentage_hoog_inkomen_huishouden)
+hist(df$percentage_hoog_inkomen_huishouden)
+
+##property value
+summary(df$gemiddelde_woz_waarde_woning)
+hist(df$gemiddelde_woz_waarde_woning)
+
+## density/urbanity
+summary(df$omgevingsadressendichtheid)
+hist(df$omgevingsadressendichtheid)
+
+summary(df$stedelijkheid)
+hist(df$stedelijkheid)</code></pre>
+<p>Calculate electricity costs based on electricity price according to
+CBS (<a href="https://opendata.cbs.nl/#/CBS/nl/dataset/85666NED/table"
+class="uri">https://opendata.cbs.nl/#/CBS/nl/dataset/85666NED/table</a>)</p>
 <pre class="r"><code>## electricity use
-summary(df$gemiddeld_elektriciteitsverbruik_woning) #3476 NAs</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
-##     810    2440    2990    3095    3650    7780    3476</code></pre>
-<pre class="r"><code>df |&gt; 
-  group_by(year) |&gt; 
-  summarise(missing_count = sum(is.na(gemiddeld_elektriciteitsverbruik_woning))) #no data in 2024</code></pre>
-<pre><code>## Simple feature collection with 8 features and 2 fields
-## Geometry type: MULTIPOLYGON
-## Dimension:     XY
-## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
-## Projected CRS: Amersfoort / RD New
-## # A tibble: 8 × 3
-##    year missing_count                                                       geom
-##   &lt;dbl&gt;         &lt;int&gt;                                         &lt;MULTIPOLYGON [m]&gt;
-## 1  2015           136 (((67757 443783, 67716 443803, 67675 443824, 67614 443854…
-## 2  2016           128 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
-## 3  2017           127 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
-## 4  2018           158 (((65359.35 444766.2, 65065.21 444883.1, 65041.03 444892.…
-## 5  2021            92 (((70474.74 442709, 70479.05 442709.9, 70566.63 442708.8,…
-## 6  2022           103 (((65751.47 443924.7, 65101.49 444222.6, 65225.73 444465.…
-## 7  2023           107 (((66528.16 443833.8, 66261.06 443820.9, 65860.24 443874.…
-## 8  2024          2625 (((69860.34 442970, 69859.23 442986.6, 69861.07 442997.3,…</code></pre>
-<pre class="r"><code>hist(df$gemiddeld_elektriciteitsverbruik_woning)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-6-4.png" width="672" /></p>
-<pre class="r"><code>## age
-sum(is.na(df$aantal_inwoners_0_tot_15_jaar) &amp; is.na(df$aantal_inwoners_15_tot_25_jaar) &amp; is.na(df$aantal_inwoners_25_tot_45_jaar) &amp; is.na(df$aantal_inwoners_45_tot_65_jaar) &amp; is.na(df$aantal_inwoners_65_jaar_en_ouder)) #0 NAs!</code></pre>
-<pre><code>## [1] 0</code></pre>
-<pre class="r"><code>sum(df$aantal_inwoners == 0) #but 411 streets with 0 residents</code></pre>
-<pre><code>## [1] 411</code></pre>
-<pre class="r"><code>#estimating the average age
+summary(df$gemiddeld_elektriciteitsverbruik_woning)
+hist(df$gemiddeld_elektriciteitsverbruik_woning)
+
+## add electricity price (CBS)
+df &lt;- df |&gt;
+  mutate(electricity_price = case_when(
+    #2015
+    gemiddeld_elektriciteitsverbruik_woning &lt; 1000 &amp; year == 2015 ~ -0.024,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 1000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 2500 &amp; year == 2015 ~ 0.166,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 2500 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 5000 &amp; year == 2015 ~ 0.196,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 5000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 15000 &amp; year == 2015 ~ 0.208,
+    #2016
+        gemiddeld_elektriciteitsverbruik_woning &lt; 1000 &amp; year == 2016 ~ -0.054,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 1000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 2500 &amp; year == 2016 ~ 0.140,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 2500 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 5000 &amp; year == 2016 ~ 0.168,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 5000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 15000 &amp; year == 2016 ~ 0.180,
+    #2017
+        gemiddeld_elektriciteitsverbruik_woning &lt; 1000 &amp; year == 2017 ~ -0.075,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 1000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 2500 &amp; year == 2017 ~ 0.129,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 2500 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 5000 &amp; year == 2017 ~ 0.161,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 5000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 15000 &amp; year == 2017 ~ 0.176,
+    #2018
+        gemiddeld_elektriciteitsverbruik_woning &lt; 1000 &amp; year == 2018 ~ -0.036,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 1000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 2500 &amp; year == 2018 ~ 0.150,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 2500 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 5000 &amp; year == 2018 ~ 0.178,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 5000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 15000 &amp; year == 2018 ~ 0.191,
+    #2019
+        gemiddeld_elektriciteitsverbruik_woning &lt; 1000 &amp; year == 2019 ~ 0.110,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 1000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 2500 &amp; year == 2019 ~ 0.199,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 2500 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 5000 &amp; year == 2019 ~ 0.205,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 5000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 15000 &amp; year == 2019 ~ 0.213,
+    #2020
+        gemiddeld_elektriciteitsverbruik_woning &lt; 1000 &amp; year == 2020 ~ -0.220,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 1000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 2500 &amp; year == 2020 ~ 0.072,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 2500 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 5000 &amp; year == 2020 ~ 0.139,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 5000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 15000 &amp; year == 2020 ~ 0.185,
+    #2021
+        gemiddeld_elektriciteitsverbruik_woning &lt; 1000 &amp; year == 2021 ~ -0.239,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 1000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 2500 &amp; year == 2021 ~ 0.066,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 2500 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 5000 &amp; year == 2021 ~ 0.136,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 5000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 15000 &amp; year == 2021 ~ 0.185,
+    #2022
+        gemiddeld_elektriciteitsverbruik_woning &lt; 1000 &amp; year == 2022 ~ -0.544,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 1000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 2500 &amp; year == 2022 ~ -0.038,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 2500 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 5000 &amp; year == 2022 ~ 0.106,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 5000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 15000 &amp; year == 2022 ~ 0.201,
+    #2023
+        gemiddeld_elektriciteitsverbruik_woning &lt; 1000 &amp; year == 2023 ~ 0.020,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 1000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 2500 &amp; year == 2023 ~ 0.230,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 2500 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 5000 &amp; year == 2023 ~ 0.316,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 5000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 15000 &amp; year == 2023 ~ 0.389,
+    #2024
+        gemiddeld_elektriciteitsverbruik_woning &lt; 1000 &amp; year == 2024 ~ -0.068,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 1000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 2500 &amp; year == 2024 ~ 0.174,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 2500 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 5000 &amp; year == 2024 ~ 0.235,
+    gemiddeld_elektriciteitsverbruik_woning &gt;= 5000 &amp; gemiddeld_elektriciteitsverbruik_woning &lt; 15000 &amp; year == 2024 ~ 0.270,
+  ))
+
+summary(df$electricity_price)
+
+## calculate electricity cost
+df &lt;- df |&gt;
+  mutate(electricity_cost = electricity_price * gemiddeld_elektriciteitsverbruik_woning)
+
+summary(df$electricity_cost)</code></pre>
+<p>Control variables</p>
+<pre class="r"><code>## home ownership
+summary(df$percentage_koopwoningen)
+summary(df$percentage_huurwoningen)
+
+df |&gt; filter(is.na(percentage_koopwoningen) &amp; is.na(percentage_huurwoningen)) |&gt; summarise(count = n())
+
+#unnecessary missings
+df &lt;- df |&gt;
+  mutate(percentage_koopwoningen = if_else (
+    is.na(percentage_koopwoningen) &amp; !is.na(percentage_huurwoningen),
+    100 - percentage_huurwoningen,
+    percentage_koopwoningen
+  ))
+
+## ethnicity
+summary(df$percentage_geb_nederland_herkomst_nederland)
+hist(df$percentage_geb_nederland_herkomst_nederland)
+
+## age
+sum(is.na(df$aantal_inwoners_0_tot_15_jaar) &amp; is.na(df$aantal_inwoners_15_tot_25_jaar) &amp; is.na(df$aantal_inwoners_25_tot_45_jaar) &amp; is.na(df$aantal_inwoners_45_tot_65_jaar) &amp; is.na(df$aantal_inwoners_65_jaar_en_ouder))
+
+
+#estimating the average age
 df &lt;- df |&gt;
   mutate(
     age_avg = (
@@ -608,112 +809,41 @@ df &lt;- df |&gt;
     / aantal_inwoners
         )
 
-summary(df$age_avg)</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
-##    0.00   31.06   37.81   38.30   44.50   83.75     411</code></pre>
-<pre class="r"><code>hist(df$age_avg)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-6-5.png" width="672" /></p>
-<pre class="r"><code>## income
-summary(df$gemiddeld_inkomen_huishouden) #15858 NAs</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
-##   17.30   33.60   36.50   36.72   39.10   70.20   15858</code></pre>
-<pre class="r"><code>df |&gt; 
-  group_by(year) |&gt; 
-  summarise(missing_count = sum(is.na(gemiddeld_inkomen_huishouden))) #data only from 2021 and 2022</code></pre>
-<pre><code>## Simple feature collection with 8 features and 2 fields
-## Geometry type: MULTIPOLYGON
-## Dimension:     XY
-## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
-## Projected CRS: Amersfoort / RD New
-## # A tibble: 8 × 3
-##    year missing_count                                                       geom
-##   &lt;dbl&gt;         &lt;int&gt;                                         &lt;MULTIPOLYGON [m]&gt;
-## 1  2015          2422 (((67757 443783, 67716 443803, 67675 443824, 67614 443854…
-## 2  2016          2440 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
-## 3  2017          2464 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
-## 4  2018          2493 (((65359.35 444766.2, 65065.21 444883.1, 65041.03 444892.…
-## 5  2021           410 (((70474.74 442709, 70479.05 442709.9, 70566.63 442708.8,…
-## 6  2022           408 (((65751.47 443924.7, 65101.49 444222.6, 65225.73 444465.…
-## 7  2023          2596 (((66528.16 443833.8, 66261.06 443820.9, 65860.24 443874.…
-## 8  2024          2625 (((69860.34 442970, 69859.23 442986.6, 69861.07 442997.3,…</code></pre>
-<pre class="r"><code>hist(df$gemiddeld_inkomen_huishouden)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-6-6.png" width="672" /></p>
-<pre class="r"><code>summary(df$percentage_laag_inkomen_huishouden) #7793 NAs</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
-##     1.9    24.7    31.1    32.5    38.2   100.0    7793</code></pre>
-<pre class="r"><code>df |&gt; 
-  group_by(year) |&gt; 
-  summarise(missing_count = sum(is.na(percentage_laag_inkomen_huishouden))) #no data in 2023 and 2024</code></pre>
-<pre><code>## Simple feature collection with 8 features and 2 fields
-## Geometry type: MULTIPOLYGON
-## Dimension:     XY
-## Bounding box:  xmin: 62856.61 ymin: 430398.8 xmax: 119527.1 ymax: 471972.6
-## Projected CRS: Amersfoort / RD New
-## # A tibble: 8 × 3
-##    year missing_count                                                       geom
-##   &lt;dbl&gt;         &lt;int&gt;                                         &lt;MULTIPOLYGON [m]&gt;
-## 1  2015           451 (((67757 443783, 67716 443803, 67675 443824, 67614 443854…
-## 2  2016           438 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
-## 3  2017           436 (((67843.76 443750, 67766.7 443790.8, 67209.65 444038.8, …
-## 4  2018           429 (((65359.35 444766.2, 65065.21 444883.1, 65041.03 444892.…
-## 5  2021           410 (((70474.74 442709, 70479.05 442709.9, 70566.63 442708.8,…
-## 6  2022           408 (((65751.47 443924.7, 65101.49 444222.6, 65225.73 444465.…
-## 7  2023          2596 (((66528.16 443833.8, 66261.06 443820.9, 65860.24 443874.…
-## 8  2024          2625 (((69860.34 442970, 69859.23 442986.6, 69861.07 442997.3,…</code></pre>
-<pre class="r"><code>hist(df$percentage_laag_inkomen_huishouden)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-6-7.png" width="672" /></p>
-<pre class="r"><code>summary(df$percentage_hoog_inkomen_huishouden) #7796 NAs</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
-##    0.00   18.00   25.00   25.64   30.90   76.90    7796</code></pre>
-<pre class="r"><code>hist(df$percentage_hoog_inkomen_huishouden)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-6-8.png" width="672" /></p>
-<pre class="r"><code>## density/urbanity
-summary(df$omgevingsadressendichtheid) #106 NAs</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
-##       2     834    1394    1441    1966    4945     106</code></pre>
-<pre class="r"><code>hist(df$omgevingsadressendichtheid)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-6-9.png" width="672" /></p>
-<pre class="r"><code>summary(df$stedelijkheid) #106 NAs</code></pre>
-<pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA&#39;s 
-##   1.000   2.000   3.000   2.874   4.000   5.000     106</code></pre>
-<pre class="r"><code>hist(df$stedelijkheid)</code></pre>
-<p><img src="lab3_files/figure-html/unnamed-chunk-6-10.png" width="672" /></p>
-<p>Calculate the spatial autocorrelation.</p>
-<pre class="r"><code>df_24 &lt;- df |&gt; filter (year == 2024)
+summary(df$age_avg)
+hist(df$age_avg)</code></pre>
+<p>Calculate the spatial autocorrelation. Appears to increase slightly
+over time (0.25 -&gt; 0.30).</p>
+<pre class="r"><code>years &lt;- c(2015:2018, 2021:2024)
+moran_results_list &lt;- list()
 
-nb &lt;- poly2nb(df_24)</code></pre>
-<pre><code>## Warning in poly2nb(df_24): some observations have no neighbours;
-## if this seems unexpected, try increasing the snap argument.</code></pre>
-<pre><code>## Warning in poly2nb(df_24): neighbour object has 2 sub-graphs;
-## if this sub-graph count seems unexpected, try increasing the snap argument.</code></pre>
-<pre class="r"><code>lw &lt;- nb2listw(nb, style = &quot;W&quot;, zero.policy = T)
+for (yr in years) {
+  
+  # Filter for the specific year
+  df_yr &lt;- df |&gt; filter(year == yr)
+    
+    # Create neighbor list
+    nb &lt;- poly2nb(df_yr)
+    
+    # Create weights list
+    lw &lt;- nb2listw(nb, style = &quot;W&quot;, zero.policy = TRUE)
+    
+    # Run Moran&#39;s I test and store it in the list using the year as the name
+    moran_results_list[[as.character(yr)]] &lt;- moran.test(df_yr$teruglevering, 
+                                                         lw, 
+                                                         zero.policy = TRUE)
+    
+}
 
-moran_result &lt;- moran.test(df_24$teruglevering, lw, zero.policy = TRUE)</code></pre>
-<p>Analysis:</p>
-<ul>
-<li><p>Spatial lag panel model (slpm package)?</p></li>
-<li><p>Social network analysis?</p></li>
-<li><p>Panel/multilevel regression with installed base effect (energy
-feed-in by “neighbors” in the previous year)</p>
-<ul>
-<li><p>This allows you to interact on the installed-base variable.
-But:</p>
-<ul>
-<li><p>For the effect of density/urbanity, you have focus on the
-influence between two streets in the same 500m by 500m square.
-How?</p></li>
-<li><p>For the effect of demographic similarity, you have to calculate
-the similarity for each combination of streets and use that in the
-interaction with the installed-base variable. How?</p></li>
-</ul></li>
-</ul></li>
-<li><p>Weight matrix by distance or “queen” contiguity?</p></li>
-<li><p>For the effect of lucrativity, look at period effect? Or add data
-per year with installation price and eletricity price?</p></li>
-</ul>
+str(moran_results_list)</code></pre>
+<p>Clean columns a bit</p>
+<pre class="r"><code>df &lt;- df |&gt;
+  select (-c(year_t_minus_one, n_hh, n_t0, teruglevering_t_minus_one, huishoudens_t_minus_one, sum_teruglevering_t0, crs28992res500m_t_minus_one)) |&gt;
+  relocate()</code></pre>
+<p>Save data ready to use for analysis</p>
+<pre class="r"><code>st_write(df, &quot;./data/data_analysis.gpkg&quot;, append = FALSE)</code></pre>
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIkpvdXJuYWwgMyINCmF1dGhvcjogIkthbGxlIFN0b2ZmZXJzIg0KZGF0ZTogIjIwMjYtMDMtMTEiDQpvdXRwdXQ6IGh0bWxfZG9jdW1lbnQNCi0tLQ0KDQpgYGB7ciBzZXR1cCwgaW5jbHVkZT1GQUxTRX0NCmtuaXRyOjpvcHRzX2NodW5rJHNldChlY2hvID0gVFJVRSkNCmBgYA0KDQojIyBFeHBsb3JpbmcgdGhlIGRhdGENCg0KUmVsZXZhbnQgcGFja2FnZXMNCg0KYGBge3J9DQpybShsaXN0PWxzKCkpDQoNCmxpYnJhcnkodGlkeXZlcnNlKQ0KbGlicmFyeShzZikNCmxpYnJhcnkodG1hcCkNCmxpYnJhcnkoc3BkZXApDQoNCmBgYA0KDQpgYGB7cn0NCmRmIDwtIHN0X3JlYWQoZHNuID0gIi4vZGF0YS9tZXJnZWRfZGF0YS5ncGtnIikNCg0KYGBgDQoNCkxvb2tpbmcgYXQgdGhlIHNvbGFyIHBhbmVsIGRhdGEgYWdhaW4NCg0KYGBge3J9DQojbGV2ZXJpbmdzcmljaHRpbmcgZnJvbSBjaGFyYWN0ZXIgdG8gbnVtZXJpYw0KY2xhc3MoZGYkbGV2ZXJpbmdzcmljaHRpbmcpDQpkZiRsZXZlcmluZ3NyaWNodGluZyA8LSBhcy5udW1lcmljKGdzdWIoIiwiLCAiLiIsIGRmJGxldmVyaW5nc3JpY2h0aW5nKSkNCg0KI3JldmVyc2UgDQpkZjwtIGRmfD4gbXV0YXRlKHRlcnVnbGV2ZXJpbmcgPSAxMDAgLSBsZXZlcmluZ3NyaWNodGluZykNCnN1bW1hcnkoZGYkdGVydWdsZXZlcmluZykNCmhpc3QoZGYkdGVydWdsZXZlcmluZykNCmRmICU+JSBmaWx0ZXIodGVydWdsZXZlcmluZyAhPSAwKSAlPiUgbnJvdygpDQoNCiNkaWNob3RvbW91cyB2YXJpYWJsZQ0KZGYgPC0gZGYgfD4gbXV0YXRlICh0ZXJ1Z2xldmVyaW5nX2QgPSBpZl9lbHNlKHRlcnVnbGV2ZXJpbmc+MCwgMSwgMCkpDQpzdW1tYXJ5KGRmJHRlcnVnbGV2ZXJpbmdfZCkNCg0KI3Bsb3RzIG92ZXIgdGltZQ0KZGYgfD4NCiAgZ3JvdXBfYnkoeWVhcikgfD4NCiAgc3VtbWFyaXNlKHllYXJseV9hdmcgPSBtZWFuKHRlcnVnbGV2ZXJpbmcsIG5hLnJtID0gVFJVRSkpIHw+DQogIGdncGxvdChhZXMoeCA9IHllYXIsIHkgPSB5ZWFybHlfYXZnKSkgKw0KICBnZW9tX2xpbmUoKSArDQogIGdlb21fcG9pbnQoKSArDQogIHNjYWxlX3lfY29udGludW91cyhsaW1pdHMgPSBjKDAsIDEwMCkpICsNCiAgc2NhbGVfeF9jb250aW51b3VzKGJyZWFrcyA9IHNlcShtaW4oZGYkeWVhciksIG1heChkZiR5ZWFyKSwgYnkgPSAyKSkrDQogIHRoZW1lX21pbmltYWwoKQ0KDQojZGljaG90b21vdXMNCmRmIHw+DQogIGdyb3VwX2J5KHllYXIpIHw+DQogIHN1bW1hcmlzZSh5ZWFybHlfYXZnID0gbWVhbih0ZXJ1Z2xldmVyaW5nX2QsIG5hLnJtID0gVFJVRSkgKiAxMDApIHw+DQogIGdncGxvdChhZXMoeCA9IHllYXIsIHkgPSB5ZWFybHlfYXZnKSkgKw0KICBnZW9tX2xpbmUoKSArDQogIGdlb21fcG9pbnQoKSArDQogIHNjYWxlX3lfY29udGludW91cyhsaW1pdHMgPSBjKDAsIDEwMCkpICsNCiAgc2NhbGVfeF9jb250aW51b3VzKGJyZWFrcyA9IHNlcShtaW4oZGYkeWVhciksIG1heChkZiR5ZWFyKSwgYnkgPSAyKSkrDQogIHRoZW1lX21pbmltYWwoKQ0KDQpgYGANCg0KTGV0J3MgcGxvdCB0aGUgZGF0YSBvbiBhIG1hcCB1c2luZyBnZ3Bsb3QuDQoNCmBgYHtyfQ0KI3Bsb3QgdGhlIGRhdGENCmRmIHw+DQogIGZpbHRlcih5ZWFyID09IDIwMjQpIHw+DQogIGdncGxvdCgNCiAgICBhZXMoZmlsbCA9IHRlcnVnbGV2ZXJpbmcpDQogICkgKw0KICBnZW9tX3NmKGNvbG9yID0gTkEpICsNCiAgc2NhbGVfZmlsbF92aXJpZGlzX2Mob3B0aW9uID0gInBsYXNtYSIsIG5hbWUgPSAiRW5lcmd5IGZlZWQtaW4iKSArDQogIHRoZW1lX21pbmltYWwoKQ0KDQoNCg0KYGBgDQoNCk5vdyB3ZSBoYXZlIG9ubHkgbWFwcGVkIHRoZSBkYXRhIGZvciBhIHNpbmdsZSB5ZWFyLiBOb3csIHdlIGNyZWF0ZSBhIG1hcCBvZiBhbGwgdGhlIHllYXJzIHVzaW5nIHRtYXA6DQoNCmBgYHtyfQ0KdG1hcF9tb2RlKCJwbG90IikNCg0KdG1fc2hhcGUoZGYpICsNCiAgdG1fZmlsbCgidGVydWdsZXZlcmluZyIpICsNCiAgdG1fZmFjZXRzKGJ5ID0gInllYXIiKQ0KDQpgYGANCg0KTG9va2luZyBhdCByZWxldmFudCB2YXJpYWJsZXMuIEhpZ2ggbGV2ZWxzIG9mIG1pc3NpbmduZXNzIGluIHRoZSBkYXRhISBNYXliZSBJIGNhbiB1c2Ugc3BhdGlhbCArIHRlbXBvcmFsIGludGVycG9sYXRpb24gdG8gaW1wdXRlIHRoZSBkYXRhPw0KDQpgYGB7cn0NCiMjIGV0aG5pdGljaXR5DQpzdW1tYXJ5KGRmJHBlcmNlbnRhZ2VfZ2ViX25lZGVybGFuZF9oZXJrb21zdF9uZWRlcmxhbmQpICM1NjUgTkFzDQpzdW0oDQogICAgaXMubmEoZGYkcGVyY2VudGFnZV9nZWJfbmVkZXJsYW5kX2hlcmtvbXN0X25lZGVybGFuZCkgJiANCiAgICBpcy5uYShkZiRwZXJjZW50YWdlX2dlYl9uZWRlcmxhbmRfaGVya29tc3Rfb3ZlcmlnX2V1cm9wYSkgJiANCiAgICBpcy5uYShkZiRwZXJjZW50YWdlX2dlYl9uZWRlcmxhbmRfaGVya29tc3RfYnVpdGVuX2V1cm9wYSkgJiANCiAgICBpcy5uYShkZiRwZXJjZW50YWdlX2dlYl9idWl0ZW5fbmVkZXJsYW5kX2hlcmtvbXN0X2V1cm9wYSkgJg0KICAgIGlzLm5hKGRmJHBlcmNlbnRhZ2VfZ2ViX2J1aXRlbl9uZWRlcmxhbmRfaGVya21zdF9idWl0ZW5fZXVyb3BhKSAmDQogICAgaXMubmEoZGYkcGVyY2VudGFnZV93ZXN0ZXJzZV9taWdyX2FjaHRlcmdyKSAmDQogICAgaXMubmEoZGYkcGVyY2VudGFnZV9uaWV0X3dlc3RlcnNlX21pZ3JfYWNodGVyZ3IpICANCiAgICApICM1MzMgdHJ1bHkgbWlzc2luZywgMzIgbGlrZWx5IHZhbHVlIGNsb3NlIHRvIDAuIA0KDQpoaXN0KGRmJHBlcmNlbnRhZ2VfZ2ViX25lZGVybGFuZF9oZXJrb21zdF9uZWRlcmxhbmQpDQoNCiMjIGhvbWUgb3duZXJzaGlwDQpzdW1tYXJ5KGRmJHBlcmNlbnRhZ2Vfa29vcHdvbmluZ2VuKSAjNDgzNiBOQXMNCmRmIHw+IGZpbHRlcihpcy5uYShwZXJjZW50YWdlX2tvb3B3b25pbmdlbikgJiBpcy5uYShwZXJjZW50YWdlX2h1dXJ3b25pbmdlbikpIHw+IHN1bW1hcmlzZShjb3VudCA9IG4oKSkgIzM5NTggb2YgdGhvc2UgaGF2ZSBtaXNzaW5nIHZhbHVlIG9uIGJvdGggcmVudGVkIGFuZCBvd25lZCBob21lcw0KZGYgfD4gZmlsdGVyKGlzLm5hKHBlcmNlbnRhZ2Vfa29vcHdvbmluZ2VuKSAmICFpcy5uYShwZXJjZW50YWdlX2h1dXJ3b25pbmdlbikpIHw+IHN1bW1hcmlzZShjb3VudCA9IG4oKSkgIzg3OCBzdHJlZXRzIGxpa2VseSBoYXZlIGNsb3NlIHRvIDAgaG9tZSBvd25lcnNoaXANCg0KZGYgfD4gDQogIGdyb3VwX2J5KHllYXIpIHw+IA0KICBzdW1tYXJpc2UobWlzc2luZ19jb3VudCA9IHN1bShpcy5uYShwZXJjZW50YWdlX2tvb3B3b25pbmdlbikpKSAjIGFib3V0IDYwMCBOQXMgaW4gZXZlcnkgeWVhcg0KDQpoaXN0KGRmJHBlcmNlbnRhZ2Vfa29vcHdvbmluZ2VuKQ0KDQojIyBwcm9wZXJ0eSB2YWx1ZQ0Kc3VtbWFyeShkZiRnZW1pZGRlbGRlX3dvel93YWFyZGVfd29uaW5nKSAjNjIxOSBOQXMNCmRmIHw+IA0KICBncm91cF9ieSh5ZWFyKSB8PiANCiAgc3VtbWFyaXNlKG1pc3NpbmdfY291bnQgPSBzdW0oaXMubmEoZ2VtaWRkZWxkZV93b3pfd2FhcmRlX3dvbmluZykpKSAjbm8gZGF0YSBpbiAyMDE1IGFuZCAyMDI0DQoNCmhpc3QoZGYkZ2VtaWRkZWxkZV93b3pfd2FhcmRlX3dvbmluZykNCg0KIyMgZWxlY3RyaWNpdHkgdXNlDQpzdW1tYXJ5KGRmJGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZykgIzM0NzYgTkFzDQpkZiB8PiANCiAgZ3JvdXBfYnkoeWVhcikgfD4gDQogIHN1bW1hcmlzZShtaXNzaW5nX2NvdW50ID0gc3VtKGlzLm5hKGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZykpKSAjbm8gZGF0YSBpbiAyMDI0DQoNCmhpc3QoZGYkZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nKQ0KDQojIyBhZ2UNCnN1bShpcy5uYShkZiRhYW50YWxfaW53b25lcnNfMF90b3RfMTVfamFhcikgJiBpcy5uYShkZiRhYW50YWxfaW53b25lcnNfMTVfdG90XzI1X2phYXIpICYgaXMubmEoZGYkYWFudGFsX2lud29uZXJzXzI1X3RvdF80NV9qYWFyKSAmIGlzLm5hKGRmJGFhbnRhbF9pbndvbmVyc180NV90b3RfNjVfamFhcikgJiBpcy5uYShkZiRhYW50YWxfaW53b25lcnNfNjVfamFhcl9lbl9vdWRlcikpICMwIE5BcyENCg0Kc3VtKGRmJGFhbnRhbF9pbndvbmVycyA9PSAwKSAjYnV0IDQxMSBzdHJlZXRzIHdpdGggMCByZXNpZGVudHMNCg0KI2VzdGltYXRpbmcgdGhlIGF2ZXJhZ2UgYWdlDQpkZiA8LSBkZiB8Pg0KICBtdXRhdGUoDQogICAgYWdlX2F2ZyA9ICgNCiAgICAgICg3LjUgKiBhYW50YWxfaW53b25lcnNfMF90b3RfMTVfamFhcikgKyANCiAgICAgICgyMCAqIGFhbnRhbF9pbndvbmVyc18xNV90b3RfMjVfamFhcikgKyANCiAgICAgICgzNSAqIGFhbnRhbF9pbndvbmVyc18yNV90b3RfNDVfamFhcikgKw0KICAgICAgKDU1ICogYWFudGFsX2lud29uZXJzXzQ1X3RvdF82NV9qYWFyKSArDQogICAgICAoNzUgKiBhYW50YWxfaW53b25lcnNfNjVfamFhcl9lbl9vdWRlcikgIA0KICAgICAgICAgICAgICApIA0KICAgIC8gYWFudGFsX2lud29uZXJzDQogICAgICAgICkNCg0Kc3VtbWFyeShkZiRhZ2VfYXZnKQ0KaGlzdChkZiRhZ2VfYXZnKQ0KDQojIyBpbmNvbWUNCnN1bW1hcnkoZGYkZ2VtaWRkZWxkX2lua29tZW5faHVpc2hvdWRlbikgIzE1ODU4IE5Bcw0KZGYgfD4gDQogIGdyb3VwX2J5KHllYXIpIHw+IA0KICBzdW1tYXJpc2UobWlzc2luZ19jb3VudCA9IHN1bShpcy5uYShnZW1pZGRlbGRfaW5rb21lbl9odWlzaG91ZGVuKSkpICNkYXRhIG9ubHkgZnJvbSAyMDIxIGFuZCAyMDIyDQoNCmhpc3QoZGYkZ2VtaWRkZWxkX2lua29tZW5faHVpc2hvdWRlbikNCg0Kc3VtbWFyeShkZiRwZXJjZW50YWdlX2xhYWdfaW5rb21lbl9odWlzaG91ZGVuKSAjNzc5MyBOQXMNCmRmIHw+IA0KICBncm91cF9ieSh5ZWFyKSB8PiANCiAgc3VtbWFyaXNlKG1pc3NpbmdfY291bnQgPSBzdW0oaXMubmEocGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbikpKSAjbm8gZGF0YSBpbiAyMDIzIGFuZCAyMDI0DQoNCmhpc3QoZGYkcGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbikNCg0Kc3VtbWFyeShkZiRwZXJjZW50YWdlX2hvb2dfaW5rb21lbl9odWlzaG91ZGVuKSAjNzc5NiBOQXMNCmhpc3QoZGYkcGVyY2VudGFnZV9ob29nX2lua29tZW5faHVpc2hvdWRlbikNCg0KDQojIyBkZW5zaXR5L3VyYmFuaXR5DQpzdW1tYXJ5KGRmJG9tZ2V2aW5nc2FkcmVzc2VuZGljaHRoZWlkKSAjMTA2IE5Bcw0KaGlzdChkZiRvbWdldmluZ3NhZHJlc3NlbmRpY2h0aGVpZCkNCg0Kc3VtbWFyeShkZiRzdGVkZWxpamtoZWlkKSAjMTA2IE5Bcw0KaGlzdChkZiRzdGVkZWxpamtoZWlkKQ0KDQpgYGANCg0KQ2FsY3VsYXRlIHRoZSBzcGF0aWFsIGF1dG9jb3JyZWxhdGlvbi4NCg0KYGBge3J9DQoNCmRmXzI0IDwtIGRmIHw+IGZpbHRlciAoeWVhciA9PSAyMDI0KQ0KDQpuYiA8LSBwb2x5Mm5iKGRmXzI0KQ0KDQpsdyA8LSBuYjJsaXN0dyhuYiwgc3R5bGUgPSAiVyIsIHplcm8ucG9saWN5ID0gVCkNCg0KbW9yYW5fcmVzdWx0IDwtIG1vcmFuLnRlc3QoZGZfMjQkdGVydWdsZXZlcmluZywgbHcsIHplcm8ucG9saWN5ID0gVFJVRSkNCmBgYA0KDQpBbmFseXNpczoNCg0KLSAgIFNwYXRpYWwgbGFnIHBhbmVsIG1vZGVsIChzbHBtIHBhY2thZ2UpPw0KDQotICAgU29jaWFsIG5ldHdvcmsgYW5hbHlzaXM/DQoNCi0gICBQYW5lbC9tdWx0aWxldmVsIHJlZ3Jlc3Npb24gd2l0aCBpbnN0YWxsZWQgYmFzZSBlZmZlY3QgKGVuZXJneSBmZWVkLWluIGJ5ICJuZWlnaGJvcnMiIGluIHRoZSBwcmV2aW91cyB5ZWFyKQ0KDQogICAgLSAgIFRoaXMgYWxsb3dzIHlvdSB0byBpbnRlcmFjdCBvbiB0aGUgaW5zdGFsbGVkLWJhc2UgdmFyaWFibGUuIEJ1dDoNCg0KICAgICAgICAtICAgRm9yIHRoZSBlZmZlY3Qgb2YgZGVuc2l0eS91cmJhbml0eSwgeW91IGhhdmUgZm9jdXMgb24gdGhlIGluZmx1ZW5jZSBiZXR3ZWVuIHR3byBzdHJlZXRzIGluIHRoZSBzYW1lIDUwMG0gYnkgNTAwbSBzcXVhcmUuIEhvdz8NCg0KICAgICAgICAtICAgRm9yIHRoZSBlZmZlY3Qgb2YgZGVtb2dyYXBoaWMgc2ltaWxhcml0eSwgeW91IGhhdmUgdG8gY2FsY3VsYXRlIHRoZSBzaW1pbGFyaXR5IGZvciBlYWNoIGNvbWJpbmF0aW9uIG9mIHN0cmVldHMgYW5kIHVzZSB0aGF0IGluIHRoZSBpbnRlcmFjdGlvbiB3aXRoIHRoZSBpbnN0YWxsZWQtYmFzZSB2YXJpYWJsZS4gSG93Pw0KDQotICAgV2VpZ2h0IG1hdHJpeCBieSBkaXN0YW5jZSBvciAicXVlZW4iIGNvbnRpZ3VpdHk/DQoNCi0gICBGb3IgdGhlIGVmZmVjdCBvZiBsdWNyYXRpdml0eSwgbG9vayBhdCBwZXJpb2QgZWZmZWN0PyBPciBhZGQgZGF0YSBwZXIgeWVhciB3aXRoIGluc3RhbGxhdGlvbiBwcmljZSBhbmQgZWxldHJpY2l0eSBwcmljZT8NCg==</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIkpvdXJuYWwgMyINCmF1dGhvcjogIkthbGxlIFN0b2ZmZXJzIg0KZGF0ZTogIjIwMjYtMDMtMTEiDQpvdXRwdXQ6IGh0bWxfZG9jdW1lbnQNCi0tLQ0KDQpgYGB7ciBzZXR1cCwgaW5jbHVkZT1GQUxTRX0NCmtuaXRyOjpvcHRzX2NodW5rJHNldChlY2hvID0gVFJVRSwgZXZhbD1GKQ0KYGBgDQoNCiMjIEV4cGxvcmluZyB0aGUgZGF0YQ0KDQpSZWxldmFudCBwYWNrYWdlcw0KDQpgYGB7cn0NCnJtKGxpc3Q9bHMoKSkNCg0KbGlicmFyeSh0aWR5dmVyc2UpDQpsaWJyYXJ5KHNmKQ0KbGlicmFyeSh0bWFwKQ0KbGlicmFyeShzcGRlcCkNCmxpYnJhcnkoVFRSKQ0KDQpgYGANCg0KYGBge3J9DQpkZiA8LSBzdF9yZWFkKGRzbiA9ICIuL2RhdGEvbWVyZ2VkX2RhdGEuZ3BrZyIpDQoNCmBgYA0KDQpMb29raW5nIGF0IHRoZSBzb2xhciBwYW5lbCBkYXRhIGFnYWluDQoNCmBgYHtyfQ0KI2xldmVyaW5nc3JpY2h0aW5nIGZyb20gY2hhcmFjdGVyIHRvIG51bWVyaWMNCmNsYXNzKGRmJGxldmVyaW5nc3JpY2h0aW5nKQ0KZGYkbGV2ZXJpbmdzcmljaHRpbmcgPC0gYXMubnVtZXJpYyhnc3ViKCIsIiwgIi4iLCBkZiRsZXZlcmluZ3NyaWNodGluZykpDQoNCiNyZXZlcnNlIA0KZGY8LSBkZnw+IG11dGF0ZSh0ZXJ1Z2xldmVyaW5nID0gMTAwIC0gbGV2ZXJpbmdzcmljaHRpbmcpDQpzdW1tYXJ5KGRmJHRlcnVnbGV2ZXJpbmcpDQpoaXN0KGRmJHRlcnVnbGV2ZXJpbmcpDQpkZiAlPiUgZmlsdGVyKHRlcnVnbGV2ZXJpbmcgIT0gMCkgJT4lIG5yb3coKQ0KDQojZGljaG90b21vdXMgdmFyaWFibGUNCmRmIDwtIGRmIHw+IG11dGF0ZSAodGVydWdsZXZlcmluZ19kID0gaWZfZWxzZSh0ZXJ1Z2xldmVyaW5nPjAsIDEsIDApKQ0Kc3VtbWFyeShkZiR0ZXJ1Z2xldmVyaW5nX2QpDQoNCiNwbG90cyBvdmVyIHRpbWUNCmRmIHw+DQogIGdyb3VwX2J5KHllYXIpIHw+DQogIHN1bW1hcmlzZSh5ZWFybHlfYXZnID0gbWVhbih0ZXJ1Z2xldmVyaW5nLCBuYS5ybSA9IFRSVUUpKSB8Pg0KICBnZ3Bsb3QoYWVzKHggPSB5ZWFyLCB5ID0geWVhcmx5X2F2ZykpICsNCiAgZ2VvbV9saW5lKCkgKw0KICBnZW9tX3BvaW50KCkgKw0KICBzY2FsZV95X2NvbnRpbnVvdXMobGltaXRzID0gYygwLCAxMDApKSArDQogIHNjYWxlX3hfY29udGludW91cyhicmVha3MgPSBzZXEobWluKGRmJHllYXIpLCBtYXgoZGYkeWVhciksIGJ5ID0gMikpKw0KICB0aGVtZV9taW5pbWFsKCkNCg0KI2RpY2hvdG9tb3VzDQpkZiB8Pg0KICBncm91cF9ieSh5ZWFyKSB8Pg0KICBzdW1tYXJpc2UoeWVhcmx5X2F2ZyA9IG1lYW4odGVydWdsZXZlcmluZ19kLCBuYS5ybSA9IFRSVUUpICogMTAwKSB8Pg0KICBnZ3Bsb3QoYWVzKHggPSB5ZWFyLCB5ID0geWVhcmx5X2F2ZykpICsNCiAgZ2VvbV9saW5lKCkgKw0KICBnZW9tX3BvaW50KCkgKw0KICBzY2FsZV95X2NvbnRpbnVvdXMobGltaXRzID0gYygwLCAxMDApKSArDQogIHNjYWxlX3hfY29udGludW91cyhicmVha3MgPSBzZXEobWluKGRmJHllYXIpLCBtYXgoZGYkeWVhciksIGJ5ID0gMikpKw0KICB0aGVtZV9taW5pbWFsKCkNCg0KYGBgDQoNCkxldCdzIHBsb3QgdGhlIGRhdGEgb24gYSBtYXAgdXNpbmcgZ2dwbG90Lg0KDQpgYGB7cn0NCiNwbG90IHRoZSBkYXRhDQpkZiB8Pg0KICBmaWx0ZXIoeWVhciA9PSAyMDI0KSB8Pg0KICBnZ3Bsb3QoDQogICAgYWVzKGZpbGwgPSB0ZXJ1Z2xldmVyaW5nKQ0KICApICsNCiAgZ2VvbV9zZihjb2xvciA9IE5BKSArDQogIHNjYWxlX2ZpbGxfdmlyaWRpc19jKG9wdGlvbiA9ICJwbGFzbWEiLCBuYW1lID0gIkVuZXJneSBmZWVkLWluIikgKw0KICB0aGVtZV9taW5pbWFsKCkNCg0KDQoNCmBgYA0KDQpOb3cgd2UgaGF2ZSBvbmx5IG1hcHBlZCB0aGUgZGF0YSBmb3IgYSBzaW5nbGUgeWVhci4gTm93LCB3ZSBjcmVhdGUgYSBtYXAgb2YgYWxsIHRoZSB5ZWFycyB1c2luZyB0bWFwOg0KDQpgYGB7cn0NCnRtYXBfbW9kZSgicGxvdCIpDQoNCnRtX3NoYXBlKGRmKSArDQogIHRtX2ZpbGwoInRlcnVnbGV2ZXJpbmciKSArDQogIHRtX2ZhY2V0cyhieSA9ICJ5ZWFyIikNCg0KYGBgDQoNCkNhbGN1bGF0aW5nIHRoZSBpbnN0YWxsZWQgYmFzZSBlZmZlY3QuDQoNCmBgYHtyfQ0KI2NhbGN1bGF0ZSB0aGUgd2VpZ2h0ZWQgc3VtIG9mIGVuZXJneSBmZWVkLWluIHBlciA1MDBtIHNxdWFyZSBwZXIgeWVhci4NCmF2Z181MDAgPC0gZGYgfD4NCiAgc3RfZHJvcF9nZW9tZXRyeSgpIHw+DQogIGdyb3VwX2J5KGNyczI4OTkycmVzNTAwbSwgeWVhcikgfD4NCiAgc3VtbWFyaXNlKA0KICAgIHN1bV90ZXJ1Z2xldmVyaW5nID0gc3VtKCh0ZXJ1Z2xldmVyaW5nICogYWFudGFsX3BhcnRfaHVpc2hvdWRlbnMpLCBuYS5ybSA9IFRSVUUpLA0KICAgIG5faGggPSBzdW0oYWFudGFsX3BhcnRfaHVpc2hvdWRlbnMpLA0KICAgIC5ncm91cHMgPSAiZHJvcCINCiAgKQ0KDQojc2VsZWN0IGVnbyBpbmZvIGF0IHQtMQ0KZWdvX3RfbWludXNfb25lIDwtIGRmIHw+DQogIHN0X2Ryb3BfZ2VvbWV0cnkoKSB8PiANCiAgcmVuYW1lKHRlcnVnbGV2ZXJpbmdfdF9taW51c19vbmUgPSB0ZXJ1Z2xldmVyaW5nLA0KICAgICAgICAgaHVpc2hvdWRlbnNfdF9taW51c19vbmUgPSBhYW50YWxfcGFydF9odWlzaG91ZGVucywNCiAgICAgICAgIGNyczI4OTkycmVzNTAwbV90X21pbnVzX29uZSA9IGNyczI4OTkycmVzNTAwbSkgfD4gDQogIHNlbGVjdChwb3N0Y29kZV92YW4sIHllYXIsIGNyczI4OTkycmVzNTAwbV90X21pbnVzX29uZSwgdGVydWdsZXZlcmluZ190X21pbnVzX29uZSwgaHVpc2hvdWRlbnNfdF9taW51c19vbmUpDQoNCg0KI2FkZCB0aGUgaW5mb3JtYXRpb24gYXQgdC0xIGFuZCBtYWtpbmcgbmVpZ2hib3Job29kIGF2ZXJhZ2Ugd2l0aG91dCAiZWdvIi4gDQpkZiA8LSBkZiB8Pg0KICBtdXRhdGUoeWVhcl90X21pbnVzX29uZSA9IHllYXIgLSAxKSB8Pg0KICANCiAgbGVmdF9qb2luKGVnb190X21pbnVzX29uZSwNCiAgICAgICAgICAgIGJ5ID0gam9pbl9ieShwb3N0Y29kZV92YW4sIHllYXJfdF9taW51c19vbmUgPT0geWVhcikpIHw+DQogICN0LTENCiAgbGVmdF9qb2luKGF2Z181MDAsDQogICAgICAgICAgICBieSA9IGpvaW5fYnkoY3JzMjg5OTJyZXM1MDBtX3RfbWludXNfb25lID09IGNyczI4OTkycmVzNTAwbSwgeWVhcl90X21pbnVzX29uZSA9PSB5ZWFyKSkgfD4NCiAgI3QwDQogIGxlZnRfam9pbihhdmdfNTAwIHw+IHJlbmFtZShzdW1fdGVydWdsZXZlcmluZ190MCA9IHN1bV90ZXJ1Z2xldmVyaW5nLCBuX3QwID0gbl9oaCksDQogICAgICAgICAgICBieSA9IGpvaW5fYnkoY3JzMjg5OTJyZXM1MDBtID09IGNyczI4OTkycmVzNTAwbSwgeWVhciA9PSB5ZWFyKSkgfD4NCiAgDQogIG11dGF0ZShuYl9wdiA9IGlmZWxzZSgNCiAgICBpcy5uYShodWlzaG91ZGVuc190X21pbnVzX29uZSksDQogICAgI3VzZSB0MCBpZiBwcmV2aW91cyB5ZWFyIG5vdCBhdmFpbGFibGUNCiAgICAoc3VtX3RlcnVnbGV2ZXJpbmdfdDAgLSAodGVydWdsZXZlcmluZyAqIGFhbnRhbF9wYXJ0X2h1aXNob3VkZW5zKSkgLyANCiAgICAgIChuX3QwIC0gYWFudGFsX3BhcnRfaHVpc2hvdWRlbnMpLA0KICAgICN1c2UgdC0xIGFzIGRlZmF1bHQNCiAgICAoc3VtX3RlcnVnbGV2ZXJpbmcgLSAodGVydWdsZXZlcmluZ190X21pbnVzX29uZSAqIGh1aXNob3VkZW5zX3RfbWludXNfb25lKSkgLw0KICAgICAgKG5faGggLSBodWlzaG91ZGVuc190X21pbnVzX29uZSkpKSANCiAgDQoNCiNkZWxldGUgcm93cyB3aXRoIHplcm8gcmVzaWRlbnRzDQpkZiA8LSBkZiB8PiBmaWx0ZXIoYWFudGFsX2lud29uZXJzICE9IDApDQoNCiNkZXNjcmlwdGl2ZXMNCnN1bW1hcnkoZGYkdGVydWdsZXZlcmluZykNCnN1bW1hcnkoZGYkbmJfcHYpDQoNCmRmIHw+DQogIGZpbHRlcihpcy5uYShuYl9wdikpIHw+DQogIHN0X2Ryb3BfZ2VvbWV0cnkoKSB8Pg0KICBjb3VudCh5ZWFyKQ0KDQojVGhlIHJlbWFpbmluZyAxMjkzIG1pc3NpbmcgYXJlIHRoZSBvbmx5IHN0cmVldHMgaW4gYSBzcXVhcmUNCmRmIHw+DQogIHN0X2Ryb3BfZ2VvbWV0cnkoKSB8Pg0KICBmaWx0ZXIoaXMubmEobmJfcHYpKSB8Pg0KICBtdXRhdGUoYWxvbmVfaW5fc3F1YXJlID0gY2FzZV93aGVuKA0KICAgICMgZGVmYXVsdCB0LTEgb3B0aW9uDQogICAgIWlzLm5hKGh1aXNob3VkZW5zX3RfbWludXNfb25lKSB+IG5faGggPT0gaHVpc2hvdWRlbnNfdF9taW51c19vbmUsDQogICAgIyB3aGVuIHVzaW5nIHQwIGluZm8NCiAgICBpcy5uYShodWlzaG91ZGVuc190X21pbnVzX29uZSkgfiBuX3QwID09IGFhbnRhbF9wYXJ0X2h1aXNob3VkZW5zDQogICkpIHw+DQogIGNvdW50KGFsb25lX2luX3NxdWFyZSkNCg0KYGBgDQoNCk1ha2UgZnVuY3Rpb24gdG8gaW1wdXRlIG1pc3NpbmcgZGF0YSBpbiBjZXJ0YWluIHllYXJzIGJhc2VkIG9uIHRoZSBleHBvbmVudGlhbCBtb3ZpbmcgYXZlcmFnZSBvZiB0aGF0IHN0cmVldA0KDQpgYGB7cn0NCmRmIDwtIGRmIHw+IGFycmFuZ2UocG9zdGNvZGVfdmFuLCB5ZWFyKQ0KDQppbXB1dGVfZW1hIDwtIGZ1bmN0aW9uKGRmLCB0YXJnZXRfeWVhciwgaGlzdG9yeV95ZWFycywgdmFyKSB7DQogIGltcHV0ZWQgPC0gZGYgfD4NCiAgICBmaWx0ZXIoaXMubmEoe3sgdmFyIH19KSAmIHllYXIgPT0gdGFyZ2V0X3llYXIpIHw+DQogICAgcHVsbChwb3N0Y29kZV92YW4pIHw+DQogICAgdW5pcXVlKCkgfD4NCiAgICBzYXBwbHkoZnVuY3Rpb24ocGMpIHsNCiAgICAgIGhpc3RfdmFsdWVzIDwtIGRmIHw+DQogICAgICAgIGZpbHRlcihwb3N0Y29kZV92YW4gPT0gcGMsIHllYXIgJWluJSBoaXN0b3J5X3llYXJzKSB8Pg0KICAgICAgICBhcnJhbmdlKHllYXIpIHw+DQogICAgICAgIHB1bGwoe3sgdmFyIH19KSB8Pg0KICAgICAgICBuYS5vbWl0KCkNCiAgICAgIA0KICAgICAgaWYgKGxlbmd0aChoaXN0X3ZhbHVlcykgPT0gMCB8fCBhbGwoaXMubmEoaGlzdF92YWx1ZXMpKSkgew0KICAgICAgICBOQV9yZWFsXw0KICAgICAgfSBlbHNlIGlmIChsZW5ndGgoaGlzdF92YWx1ZXMpID09IDEpIHsNCiAgICAgICAgaGlzdF92YWx1ZXNbMV0NCiAgICAgIH0gZWxzZSB7DQogICAgICAgIHRhaWwoRU1BKGhpc3RfdmFsdWVzLCAyKSwgMSkNCiAgICAgIH0NCiAgICB9KSB8Pg0KICAgIGVuZnJhbWUobmFtZSA9ICJwb3N0Y29kZV92YW4iLCB2YWx1ZSA9ICJpbXB1dGVkX3ZhbHVlIikNCiAgDQogIGRmIHw+DQogICAgbGVmdF9qb2luKGltcHV0ZWQsIGJ5ID0gInBvc3Rjb2RlX3ZhbiIpIHw+DQogICAgbXV0YXRlKHt7IHZhciB9fSA6PSBjYXNlX3doZW4oDQogICAgICBpcy5uYSh7eyB2YXIgfX0pICYgeWVhciA9PSB0YXJnZXRfeWVhciB+IGltcHV0ZWRfdmFsdWUsDQogICAgICAuZGVmYXVsdCA9IHt7IHZhciB9fQ0KICAgICkpIHw+DQogICAgc2VsZWN0KC1pbXB1dGVkX3ZhbHVlKQ0KfQ0KDQpgYGANCg0KSW1wdXRlIG1pc3NpbmcgeWVhcnMNCg0KYGBge3J9DQoNCmRmIHw+IA0KICBncm91cF9ieSh5ZWFyKSB8PiANCiAgc3VtbWFyaXNlKG1pc3NpbmdfY291bnQgPSBzdW0oaXMubmEocGVyY2VudGFnZV9ob29nX2lua29tZW5faHVpc2hvdWRlbikgJiBpcy5uYShwZXJjZW50YWdlX2xhYWdfaW5rb21lbl9odWlzaG91ZGVuKSkpDQoNCmRmIHw+IA0KICBncm91cF9ieSh5ZWFyKSB8PiANCiAgc3VtbWFyaXNlKG1pc3NpbmdfY291bnQgPSBzdW0oaXMubmEoZ2VtaWRkZWxkZV93b3pfd2FhcmRlX3dvbmluZykpKQ0KDQpkZiB8PiANCiAgZ3JvdXBfYnkoeWVhcikgfD4gDQogIHN1bW1hcmlzZShtaXNzaW5nX2NvdW50ID0gc3VtKGlzLm5hKGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZykpKQ0KDQoNCmRmIDwtIGRmIHw+DQogIGltcHV0ZV9lbWEodGFyZ2V0X3llYXIgPSAyMDIzLCBoaXN0b3J5X3llYXJzID0gYygyMDIxLCAyMDIyKSwgdmFyID0gcGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbikgfD4NCiAgaW1wdXRlX2VtYSh0YXJnZXRfeWVhciA9IDIwMjQsIGhpc3RvcnlfeWVhcnMgPSBjKDIwMjIsIDIwMjMpLCB2YXIgPSBwZXJjZW50YWdlX2xhYWdfaW5rb21lbl9odWlzaG91ZGVuKSB8Pg0KICBpbXB1dGVfZW1hKHRhcmdldF95ZWFyID0gMjAyMywgaGlzdG9yeV95ZWFycyA9IGMoMjAyMSwgMjAyMiksIHZhciA9IHBlcmNlbnRhZ2VfaG9vZ19pbmtvbWVuX2h1aXNob3VkZW4pIHw+DQogIGltcHV0ZV9lbWEodGFyZ2V0X3llYXIgPSAyMDI0LCBoaXN0b3J5X3llYXJzID0gYygyMDIyLCAyMDIzKSwgdmFyID0gcGVyY2VudGFnZV9ob29nX2lua29tZW5faHVpc2hvdWRlbikgfD4NCiAgaW1wdXRlX2VtYSh0YXJnZXRfeWVhciA9IDIwMTUsIGhpc3RvcnlfeWVhcnMgPSBjKDIwMTcsIDIwMTYpLCB2YXIgPSBnZW1pZGRlbGRlX3dvel93YWFyZGVfd29uaW5nKSB8Pg0KICBpbXB1dGVfZW1hKHRhcmdldF95ZWFyID0gMjAyNCwgaGlzdG9yeV95ZWFycyA9IGMoMjAyMiwgMjAyMyksIHZhciA9IGdlbWlkZGVsZGVfd296X3dhYXJkZV93b25pbmcpIHw+DQogIGltcHV0ZV9lbWEodGFyZ2V0X3llYXIgPSAyMDI0LCBoaXN0b3J5X3llYXJzID0gYygyMDIyLCAyMDIzKSwgdmFyID0gZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nKQ0KDQoNCg0KYGBgDQoNCkNhbGN1bGF0aW5nIGRpdmVyc2l0eSBtZWFzdXJlczogSGVyZmluZGFobCBpbmRleC4NCg0KYGBge3J9DQojI2Vjb25vbWljIGRpdmVyc2l0eQ0KZGYgPC0gZGYgfD4NCiAgbXV0YXRlKA0KICAgIGVjb25vbWljX2RpdmVyc2l0eSA9IDEgLSAoKHBlcmNlbnRhZ2VfaG9vZ19pbmtvbWVuX2h1aXNob3VkZW5eMiArDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwZXJjZW50YWdlX2xhYWdfaW5rb21lbl9odWlzaG91ZGVuXjIgKyANCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICgxMDAgLSBwZXJjZW50YWdlX2hvb2dfaW5rb21lbl9odWlzaG91ZGVuIC0gcGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbileMg0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICkgDQogICAgICAgICAvIDEwMDAwIA0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgKQ0KICAgICAgICAgKQ0KDQpzdW1tYXJ5KGRmJGVjb25vbWljX2RpdmVyc2l0eSkNCg0KIyNldGhuaWMgZGl2ZXJzaXR5IA0KDQpkZiA8LSBkZiB8Pg0KICBtdXRhdGUoDQogICAgZXRobmljX2RpdmVyc2l0eSA9IDEgLSAoKHBlcmNlbnRhZ2VfZ2ViX25lZGVybGFuZF9oZXJrb21zdF9uZWRlcmxhbmRfNTAwXjIgKyAoMTAwIC0gcGVyY2VudGFnZV9nZWJfbmVkZXJsYW5kX2hlcmtvbXN0X25lZGVybGFuZF81MDApXjIpIC8gMTAwMDApDQogICkNCg0Kc3VtbWFyeShkZiRldGhuaWNfZGl2ZXJzaXR5KQ0KDQpkZiB8PiANCiAgZ3JvdXBfYnkoeWVhcikgfD4gDQogIHN1bW1hcmlzZShtaXNzaW5nX2NvdW50ID0gc3VtKGlzLm5hKGV0aG5pY19kaXZlcnNpdHkpKSkNCg0KIyNhZ2UgZGl2ZXJzaXR5DQoNCiNzZXQgbnVtYmVyIGluIGFnZSBjYXRlZ29yeSB0byAwIGlmIHRoZSB0b3RhbCBudW1iZXIgb2YgcGVvcGxlIGlzIG5vdCBtaXNzaW5nDQpkZiA8LSBkZiB8Pg0KICBtdXRhdGUoDQogICAgYWFudGFsX2lud29uZXJzXzBfdG90XzE1X2phYXJfNTAwID0gaWZfZWxzZSgNCiAgICAgIGlzLm5hKGFhbnRhbF9pbndvbmVyc18wX3RvdF8xNV9qYWFyXzUwMCkgJiAhaXMubmEoYWFudGFsX2lud29uZXJzXzUwMCksDQogICAgICAwLA0KICAgICAgYWFudGFsX2lud29uZXJzXzBfdG90XzE1X2phYXJfNTAwDQogICAgKSwNCiAgICBhYW50YWxfaW53b25lcnNfMTVfdG90XzI1X2phYXJfNTAwID0gaWZfZWxzZSgNCiAgICAgIGlzLm5hKGFhbnRhbF9pbndvbmVyc18xNV90b3RfMjVfamFhcl81MDApICYgIWlzLm5hKGFhbnRhbF9pbndvbmVyc181MDApLA0KICAgICAgMCwNCiAgICAgIGFhbnRhbF9pbndvbmVyc18xNV90b3RfMjVfamFhcl81MDANCiAgICApLA0KICAgIGFhbnRhbF9pbndvbmVyc18yNV90b3RfNDVfamFhcl81MDAgPSBpZl9lbHNlKA0KICAgICAgaXMubmEoYWFudGFsX2lud29uZXJzXzI1X3RvdF80NV9qYWFyXzUwMCkgJiAhaXMubmEoYWFudGFsX2lud29uZXJzXzUwMCksDQogICAgICAwLA0KICAgICAgYWFudGFsX2lud29uZXJzXzI1X3RvdF80NV9qYWFyXzUwMA0KICAgICksDQogICAgYWFudGFsX2lud29uZXJzXzQ1X3RvdF82NV9qYWFyXzUwMCA9IGlmX2Vsc2UoDQogICAgICBpcy5uYShhYW50YWxfaW53b25lcnNfNDVfdG90XzY1X2phYXJfNTAwKSAmICFpcy5uYShhYW50YWxfaW53b25lcnNfNTAwKSwNCiAgICAgIDAsDQogICAgICBhYW50YWxfaW53b25lcnNfNDVfdG90XzY1X2phYXJfNTAwDQogICAgKSwNCiAgICBhYW50YWxfaW53b25lcnNfNjVfamFhcl9lbl9vdWRlcl81MDAgPSBpZl9lbHNlKA0KICAgICAgaXMubmEoYWFudGFsX2lud29uZXJzXzY1X2phYXJfZW5fb3VkZXJfNTAwKSAmICFpcy5uYShhYW50YWxfaW53b25lcnNfNTAwKSwNCiAgICAgIDAsDQogICAgICBhYW50YWxfaW53b25lcnNfNjVfamFhcl9lbl9vdWRlcl81MDANCiAgICApDQogICkNCg0KI2NhbGN1bGF0ZSBwcm9wb3J0aW9ucw0KZGYgPC0gZGYgfD4NCiAgbXV0YXRlKA0KICAgIHBlcmNlbnRhZ2VfaW53b25lcnNfMF90b3RfMTVfamFhcl81MDAgPSBhYW50YWxfaW53b25lcnNfMF90b3RfMTVfamFhcl81MDAgLyBhYW50YWxfaW53b25lcnNfNTAwLA0KICAgIHBlcmNlbnRhZ2VfaW53b25lcnNfMTVfdG90XzI1X2phYXJfNTAwID0gYWFudGFsX2lud29uZXJzXzE1X3RvdF8yNV9qYWFyXzUwMCAvIGFhbnRhbF9pbndvbmVyc181MDAsDQogICAgcGVyY2VudGFnZV9pbndvbmVyc18yNV90b3RfNDVfamFhcl81MDAgPSBhYW50YWxfaW53b25lcnNfMjVfdG90XzQ1X2phYXJfNTAwIC8gYWFudGFsX2lud29uZXJzXzUwMCwNCiAgICBwZXJjZW50YWdlX2lud29uZXJzXzQ1X3RvdF82NV9qYWFyXzUwMCA9IGFhbnRhbF9pbndvbmVyc180NV90b3RfNjVfamFhcl81MDAgLyBhYW50YWxfaW53b25lcnNfNTAwLA0KICAgIHBlcmNlbnRhZ2VfaW53b25lcnNfNjVfamFhcl9lbl9vdWRlcl81MDAgPSBhYW50YWxfaW53b25lcnNfNjVfamFhcl9lbl9vdWRlcl81MDAgLyBhYW50YWxfaW53b25lcnNfNTAwLA0KICApDQoNCmRmIDwtIGRmIHw+DQogIG11dGF0ZSgNCiAgICBhZ2VfZGl2ZXJzaXR5ID0gMSAtIChwZXJjZW50YWdlX2lud29uZXJzXzBfdG90XzE1X2phYXJfNTAwXjIgKw0KICAgICAgICAgICAgICAgICAgICBwZXJjZW50YWdlX2lud29uZXJzXzE1X3RvdF8yNV9qYWFyXzUwMF4yICsNCiAgICAgICAgICAgICAgICAgICAgcGVyY2VudGFnZV9pbndvbmVyc18yNV90b3RfNDVfamFhcl81MDBeMiArDQogICAgICAgICAgICAgICAgICAgIHBlcmNlbnRhZ2VfaW53b25lcnNfNDVfdG90XzY1X2phYXJfNTAwXjIgKw0KICAgICAgICAgICAgICAgICAgICBwZXJjZW50YWdlX2lud29uZXJzXzY1X2phYXJfZW5fb3VkZXJfNTAwXjIpDQogICkNCg0KDQpzdW1tYXJ5KGRmJGFnZV9kaXZlcnNpdHkpDQoNCmRmIHw+IA0KICBncm91cF9ieSh5ZWFyKSB8PiANCiAgc3VtbWFyaXNlKG1pc3NpbmdfY291bnQgPSBzdW0oaXMubmEoYWdlX2RpdmVyc2l0eSkpKQ0KDQpgYGANCg0KQWRkIGRhdGEgb24gc29sYXIgcGFuZWwgcHJpY2VzIChzb3VyY2U6IDxodHRwczovL3d3dy5pcmVuYS5vcmcvRGF0YS9WaWV3LWRhdGEtYnktdG9waWMvQ29zdHMvU29sYXItY29zdHM+KQ0KDQpgYGB7cn0NCmRmIDwtIGRmIHw+DQogIG11dGF0ZShzb2xhcl9jb3N0ID0gY2FzZV93aGVuKA0KICAgIHllYXIgPT0gMjAxNSB+IE5BLA0KICAgIHllYXIgPT0gMjAxNiB+IDAuMTI5MSwNCiAgICB5ZWFyID09IDIwMTcgfiAwLjE0MzAsDQogICAgeWVhciA9PSAyMDE4IH4gMC4xMDkyLA0KICAgIHllYXIgPT0gMjAxOSB+IDAuMTA0MCwNCiAgICB5ZWFyID09IDIwMjAgfiAwLjEwMDYsDQogICAgeWVhciA9PSAyMDIxIH4gMC4wODM2LA0KICAgIHllYXIgPT0gMjAyMiB+IDAuMDkxMiwNCiAgICB5ZWFyID09IDIwMjMgfiAwLjA2OTksDQogICAgeWVhciA9PSAyMDI0IH4gTkENCiAgKSkNCg0KZGYgPC0gZGYgfD4NCiAgICBpbXB1dGVfZW1hKHRhcmdldF95ZWFyID0gMjAxNSwgaGlzdG9yeV95ZWFycyA9IGMoMjAxNywgMjAxNiksIHZhciA9IHNvbGFyX2Nvc3QpIHw+DQogICAgaW1wdXRlX2VtYSh0YXJnZXRfeWVhciA9IDIwMjQsIGhpc3RvcnlfeWVhcnMgPSBjKDIwMjIsIDIwMjMpLCB2YXIgPSBzb2xhcl9jb3N0KQ0KICANCnN1bW1hcnkoZGYkc29sYXJfY29zdCkNCmBgYA0KDQpMb29raW5nIGF0IGRlc2NyaXB0aXZlcy4NCg0KYGBge3J9DQojIyBpbmNvbWUNCnN1bW1hcnkoZGYkcGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbikNCmhpc3QoZGYkcGVyY2VudGFnZV9sYWFnX2lua29tZW5faHVpc2hvdWRlbikNCg0Kc3VtbWFyeShkZiRwZXJjZW50YWdlX2hvb2dfaW5rb21lbl9odWlzaG91ZGVuKQ0KaGlzdChkZiRwZXJjZW50YWdlX2hvb2dfaW5rb21lbl9odWlzaG91ZGVuKQ0KDQojI3Byb3BlcnR5IHZhbHVlDQpzdW1tYXJ5KGRmJGdlbWlkZGVsZGVfd296X3dhYXJkZV93b25pbmcpDQpoaXN0KGRmJGdlbWlkZGVsZGVfd296X3dhYXJkZV93b25pbmcpDQoNCiMjIGRlbnNpdHkvdXJiYW5pdHkNCnN1bW1hcnkoZGYkb21nZXZpbmdzYWRyZXNzZW5kaWNodGhlaWQpDQpoaXN0KGRmJG9tZ2V2aW5nc2FkcmVzc2VuZGljaHRoZWlkKQ0KDQpzdW1tYXJ5KGRmJHN0ZWRlbGlqa2hlaWQpDQpoaXN0KGRmJHN0ZWRlbGlqa2hlaWQpDQoNCmBgYA0KDQpDYWxjdWxhdGUgZWxlY3RyaWNpdHkgY29zdHMgYmFzZWQgb24gZWxlY3RyaWNpdHkgcHJpY2UgYWNjb3JkaW5nIHRvIENCUyAoPGh0dHBzOi8vb3BlbmRhdGEuY2JzLm5sLyMvQ0JTL25sL2RhdGFzZXQvODU2NjZORUQvdGFibGU+KQ0KDQpgYGB7cn0NCiMjIGVsZWN0cmljaXR5IHVzZQ0Kc3VtbWFyeShkZiRnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcpDQpoaXN0KGRmJGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZykNCg0KIyMgYWRkIGVsZWN0cmljaXR5IHByaWNlIChDQlMpDQpkZiA8LSBkZiB8Pg0KICBtdXRhdGUoZWxlY3RyaWNpdHlfcHJpY2UgPSBjYXNlX3doZW4oDQogICAgIzIwMTUNCiAgICBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAxMDAwICYgeWVhciA9PSAyMDE1IH4gLTAuMDI0LA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSAxMDAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgMjUwMCAmIHllYXIgPT0gMjAxNSB+IDAuMTY2LA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSAyNTAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgNTAwMCAmIHllYXIgPT0gMjAxNSB+IDAuMTk2LA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSA1MDAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgMTUwMDAgJiB5ZWFyID09IDIwMTUgfiAwLjIwOCwNCiAgICAjMjAxNg0KICAgICAgICBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAxMDAwICYgeWVhciA9PSAyMDE2IH4gLTAuMDU0LA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSAxMDAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgMjUwMCAmIHllYXIgPT0gMjAxNiB+IDAuMTQwLA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSAyNTAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgNTAwMCAmIHllYXIgPT0gMjAxNiB+IDAuMTY4LA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSA1MDAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgMTUwMDAgJiB5ZWFyID09IDIwMTYgfiAwLjE4MCwNCiAgICAjMjAxNw0KICAgICAgICBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAxMDAwICYgeWVhciA9PSAyMDE3IH4gLTAuMDc1LA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSAxMDAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgMjUwMCAmIHllYXIgPT0gMjAxNyB+IDAuMTI5LA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSAyNTAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgNTAwMCAmIHllYXIgPT0gMjAxNyB+IDAuMTYxLA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSA1MDAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgMTUwMDAgJiB5ZWFyID09IDIwMTcgfiAwLjE3NiwNCiAgICAjMjAxOA0KICAgICAgICBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAxMDAwICYgeWVhciA9PSAyMDE4IH4gLTAuMDM2LA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSAxMDAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgMjUwMCAmIHllYXIgPT0gMjAxOCB+IDAuMTUwLA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSAyNTAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgNTAwMCAmIHllYXIgPT0gMjAxOCB+IDAuMTc4LA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSA1MDAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgMTUwMDAgJiB5ZWFyID09IDIwMTggfiAwLjE5MSwNCiAgICAjMjAxOQ0KICAgICAgICBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAxMDAwICYgeWVhciA9PSAyMDE5IH4gMC4xMTAsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDEwMDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAyNTAwICYgeWVhciA9PSAyMDE5IH4gMC4xOTksDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDI1MDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCA1MDAwICYgeWVhciA9PSAyMDE5IH4gMC4yMDUsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDUwMDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAxNTAwMCAmIHllYXIgPT0gMjAxOSB+IDAuMjEzLA0KICAgICMyMDIwDQogICAgICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA8IDEwMDAgJiB5ZWFyID09IDIwMjAgfiAtMC4yMjAsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDEwMDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAyNTAwICYgeWVhciA9PSAyMDIwIH4gMC4wNzIsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDI1MDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCA1MDAwICYgeWVhciA9PSAyMDIwIH4gMC4xMzksDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDUwMDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAxNTAwMCAmIHllYXIgPT0gMjAyMCB+IDAuMTg1LA0KICAgICMyMDIxDQogICAgICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA8IDEwMDAgJiB5ZWFyID09IDIwMjEgfiAtMC4yMzksDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDEwMDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAyNTAwICYgeWVhciA9PSAyMDIxIH4gMC4wNjYsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDI1MDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCA1MDAwICYgeWVhciA9PSAyMDIxIH4gMC4xMzYsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDUwMDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAxNTAwMCAmIHllYXIgPT0gMjAyMSB+IDAuMTg1LA0KICAgICMyMDIyDQogICAgICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA8IDEwMDAgJiB5ZWFyID09IDIwMjIgfiAtMC41NDQsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDEwMDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAyNTAwICYgeWVhciA9PSAyMDIyIH4gLTAuMDM4LA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSAyNTAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgNTAwMCAmIHllYXIgPT0gMjAyMiB+IDAuMTA2LA0KICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA+PSA1MDAwICYgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nIDwgMTUwMDAgJiB5ZWFyID09IDIwMjIgfiAwLjIwMSwNCiAgICAjMjAyMw0KICAgICAgICBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAxMDAwICYgeWVhciA9PSAyMDIzIH4gMC4wMjAsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDEwMDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAyNTAwICYgeWVhciA9PSAyMDIzIH4gMC4yMzAsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDI1MDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCA1MDAwICYgeWVhciA9PSAyMDIzIH4gMC4zMTYsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDUwMDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAxNTAwMCAmIHllYXIgPT0gMjAyMyB+IDAuMzg5LA0KICAgICMyMDI0DQogICAgICAgIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZyA8IDEwMDAgJiB5ZWFyID09IDIwMjQgfiAtMC4wNjgsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDEwMDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAyNTAwICYgeWVhciA9PSAyMDI0IH4gMC4xNzQsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDI1MDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCA1MDAwICYgeWVhciA9PSAyMDI0IH4gMC4yMzUsDQogICAgZ2VtaWRkZWxkX2VsZWt0cmljaXRlaXRzdmVyYnJ1aWtfd29uaW5nID49IDUwMDAgJiBnZW1pZGRlbGRfZWxla3RyaWNpdGVpdHN2ZXJicnVpa193b25pbmcgPCAxNTAwMCAmIHllYXIgPT0gMjAyNCB+IDAuMjcwLA0KICApKQ0KDQpzdW1tYXJ5KGRmJGVsZWN0cmljaXR5X3ByaWNlKQ0KDQojIyBjYWxjdWxhdGUgZWxlY3RyaWNpdHkgY29zdA0KZGYgPC0gZGYgfD4NCiAgbXV0YXRlKGVsZWN0cmljaXR5X2Nvc3QgPSBlbGVjdHJpY2l0eV9wcmljZSAqIGdlbWlkZGVsZF9lbGVrdHJpY2l0ZWl0c3ZlcmJydWlrX3dvbmluZykNCg0Kc3VtbWFyeShkZiRlbGVjdHJpY2l0eV9jb3N0KQ0KDQoNCmBgYA0KDQpDb250cm9sIHZhcmlhYmxlcw0KDQpgYGB7cn0NCiMjIGhvbWUgb3duZXJzaGlwDQpzdW1tYXJ5KGRmJHBlcmNlbnRhZ2Vfa29vcHdvbmluZ2VuKQ0Kc3VtbWFyeShkZiRwZXJjZW50YWdlX2h1dXJ3b25pbmdlbikNCg0KZGYgfD4gZmlsdGVyKGlzLm5hKHBlcmNlbnRhZ2Vfa29vcHdvbmluZ2VuKSAmIGlzLm5hKHBlcmNlbnRhZ2VfaHV1cndvbmluZ2VuKSkgfD4gc3VtbWFyaXNlKGNvdW50ID0gbigpKQ0KDQojdW5uZWNlc3NhcnkgbWlzc2luZ3MNCmRmIDwtIGRmIHw+DQogIG11dGF0ZShwZXJjZW50YWdlX2tvb3B3b25pbmdlbiA9IGlmX2Vsc2UgKA0KICAgIGlzLm5hKHBlcmNlbnRhZ2Vfa29vcHdvbmluZ2VuKSAmICFpcy5uYShwZXJjZW50YWdlX2h1dXJ3b25pbmdlbiksDQogICAgMTAwIC0gcGVyY2VudGFnZV9odXVyd29uaW5nZW4sDQogICAgcGVyY2VudGFnZV9rb29wd29uaW5nZW4NCiAgKSkNCg0KIyMgZXRobmljaXR5DQpzdW1tYXJ5KGRmJHBlcmNlbnRhZ2VfZ2ViX25lZGVybGFuZF9oZXJrb21zdF9uZWRlcmxhbmQpDQpoaXN0KGRmJHBlcmNlbnRhZ2VfZ2ViX25lZGVybGFuZF9oZXJrb21zdF9uZWRlcmxhbmQpDQoNCiMjIGFnZQ0Kc3VtKGlzLm5hKGRmJGFhbnRhbF9pbndvbmVyc18wX3RvdF8xNV9qYWFyKSAmIGlzLm5hKGRmJGFhbnRhbF9pbndvbmVyc18xNV90b3RfMjVfamFhcikgJiBpcy5uYShkZiRhYW50YWxfaW53b25lcnNfMjVfdG90XzQ1X2phYXIpICYgaXMubmEoZGYkYWFudGFsX2lud29uZXJzXzQ1X3RvdF82NV9qYWFyKSAmIGlzLm5hKGRmJGFhbnRhbF9pbndvbmVyc182NV9qYWFyX2VuX291ZGVyKSkNCg0KDQojZXN0aW1hdGluZyB0aGUgYXZlcmFnZSBhZ2UNCmRmIDwtIGRmIHw+DQogIG11dGF0ZSgNCiAgICBhZ2VfYXZnID0gKA0KICAgICAgKDcuNSAqIGFhbnRhbF9pbndvbmVyc18wX3RvdF8xNV9qYWFyKSArIA0KICAgICAgKDIwICogYWFudGFsX2lud29uZXJzXzE1X3RvdF8yNV9qYWFyKSArIA0KICAgICAgKDM1ICogYWFudGFsX2lud29uZXJzXzI1X3RvdF80NV9qYWFyKSArDQogICAgICAoNTUgKiBhYW50YWxfaW53b25lcnNfNDVfdG90XzY1X2phYXIpICsNCiAgICAgICg3NSAqIGFhbnRhbF9pbndvbmVyc182NV9qYWFyX2VuX291ZGVyKSAgDQogICAgICAgICAgICAgICkgDQogICAgLyBhYW50YWxfaW53b25lcnMNCiAgICAgICAgKQ0KDQpzdW1tYXJ5KGRmJGFnZV9hdmcpDQpoaXN0KGRmJGFnZV9hdmcpDQoNCmBgYA0KDQpDYWxjdWxhdGUgdGhlIHNwYXRpYWwgYXV0b2NvcnJlbGF0aW9uLiBBcHBlYXJzIHRvIGluY3JlYXNlIHNsaWdodGx5IG92ZXIgdGltZSAoMC4yNSAtXD4gMC4zMCkuDQoNCmBgYHtyfQ0KeWVhcnMgPC0gYygyMDE1OjIwMTgsIDIwMjE6MjAyNCkNCm1vcmFuX3Jlc3VsdHNfbGlzdCA8LSBsaXN0KCkNCg0KZm9yICh5ciBpbiB5ZWFycykgew0KICANCiAgIyBGaWx0ZXIgZm9yIHRoZSBzcGVjaWZpYyB5ZWFyDQogIGRmX3lyIDwtIGRmIHw+IGZpbHRlcih5ZWFyID09IHlyKQ0KICAgIA0KICAgICMgQ3JlYXRlIG5laWdoYm9yIGxpc3QNCiAgICBuYiA8LSBwb2x5Mm5iKGRmX3lyKQ0KICAgIA0KICAgICMgQ3JlYXRlIHdlaWdodHMgbGlzdA0KICAgIGx3IDwtIG5iMmxpc3R3KG5iLCBzdHlsZSA9ICJXIiwgemVyby5wb2xpY3kgPSBUUlVFKQ0KICAgIA0KICAgICMgUnVuIE1vcmFuJ3MgSSB0ZXN0IGFuZCBzdG9yZSBpdCBpbiB0aGUgbGlzdCB1c2luZyB0aGUgeWVhciBhcyB0aGUgbmFtZQ0KICAgIG1vcmFuX3Jlc3VsdHNfbGlzdFtbYXMuY2hhcmFjdGVyKHlyKV1dIDwtIG1vcmFuLnRlc3QoZGZfeXIkdGVydWdsZXZlcmluZywgDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsdywgDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB6ZXJvLnBvbGljeSA9IFRSVUUpDQogICAgDQp9DQoNCnN0cihtb3Jhbl9yZXN1bHRzX2xpc3QpDQpgYGANCg0KQ2xlYW4gY29sdW1ucyBhIGJpdA0KDQpgYGB7cn0NCg0KZGYgPC0gZGYgfD4NCiAgc2VsZWN0ICgtYyh5ZWFyX3RfbWludXNfb25lLCBuX2hoLCBuX3QwLCB0ZXJ1Z2xldmVyaW5nX3RfbWludXNfb25lLCBodWlzaG91ZGVuc190X21pbnVzX29uZSwgc3VtX3RlcnVnbGV2ZXJpbmdfdDAsIGNyczI4OTkycmVzNTAwbV90X21pbnVzX29uZSkpIHw+DQogIHJlbG9jYXRlKCkNCg0KYGBgDQoNClNhdmUgZGF0YSByZWFkeSB0byB1c2UgZm9yIGFuYWx5c2lzDQoNCmBgYHtyfQ0Kc3Rfd3JpdGUoZGYsICIuL2RhdGEvZGF0YV9hbmFseXNpcy5ncGtnIiwgYXBwZW5kID0gRkFMU0UpDQpgYGANCg==</div>
 
 
 </div>

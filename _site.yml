@@ -17,7 +17,9 @@ navbar:
       - text: "Page 2"
         href: lab2.html
       - text: "Page 3"
-        href: lab3.html       
+        href: Preparing_data_clean.html 
+      - text: "Page 4"
+        href: First_analyses.html
         # here, other .Rmds can be added
 
 

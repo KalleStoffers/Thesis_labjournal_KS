@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval=F)
 ```
 
 ## Exploring the data
@@ -20,6 +20,7 @@ library(tidyverse)
 library(sf)
 library(tmap)
 library(spdep)
+library(TTR)
 
 ```
 
@@ -97,54 +98,378 @@ tm_shape(df) +
 
 ```
 
-Looking at relevant variables. High levels of missingness in the data! Maybe I can use spatial + temporal interpolation to impute the data?
+Calculating the installed base effect.
 
 ```{r}
-## ethniticity
-summary(df$percentage_geb_nederland_herkomst_nederland) #565 NAs
-sum(
-    is.na(df$percentage_geb_nederland_herkomst_nederland) & 
-    is.na(df$percentage_geb_nederland_herkomst_overig_europa) & 
-    is.na(df$percentage_geb_nederland_herkomst_buiten_europa) & 
-    is.na(df$percentage_geb_buiten_nederland_herkomst_europa) &
-    is.na(df$percentage_geb_buiten_nederland_herkmst_buiten_europa) &
-    is.na(df$percentage_westerse_migr_achtergr) &
-    is.na(df$percentage_niet_westerse_migr_achtergr)  
-    ) #533 truly missing, 32 likely value close to 0. 
+#calculate the weighted sum of energy feed-in per 500m square per year.
+avg_500 <- df |>
+  st_drop_geometry() |>
+  group_by(crs28992res500m, year) |>
+  summarise(
+    sum_teruglevering = sum((teruglevering * aantal_part_huishoudens), na.rm = TRUE),
+    n_hh = sum(aantal_part_huishoudens),
+    .groups = "drop"
+  )
 
-hist(df$percentage_geb_nederland_herkomst_nederland)
+#select ego info at t-1
+ego_t_minus_one <- df |>
+  st_drop_geometry() |> 
+  rename(teruglevering_t_minus_one = teruglevering,
+         huishoudens_t_minus_one = aantal_part_huishoudens,
+         crs28992res500m_t_minus_one = crs28992res500m) |> 
+  select(postcode_van, year, crs28992res500m_t_minus_one, teruglevering_t_minus_one, huishoudens_t_minus_one)
 
-## home ownership
-summary(df$percentage_koopwoningen) #4836 NAs
-df |> filter(is.na(percentage_koopwoningen) & is.na(percentage_huurwoningen)) |> summarise(count = n()) #3958 of those have missing value on both rented and owned homes
-df |> filter(is.na(percentage_koopwoningen) & !is.na(percentage_huurwoningen)) |> summarise(count = n()) #878 streets likely have close to 0 home ownership
+
+#add the information at t-1 and making neighborhood average without "ego". 
+df <- df |>
+  mutate(year_t_minus_one = year - 1) |>
+  
+  left_join(ego_t_minus_one,
+            by = join_by(postcode_van, year_t_minus_one == year)) |>
+  #t-1
+  left_join(avg_500,
+            by = join_by(crs28992res500m_t_minus_one == crs28992res500m, year_t_minus_one == year)) |>
+  #t0
+  left_join(avg_500 |> rename(sum_teruglevering_t0 = sum_teruglevering, n_t0 = n_hh),
+            by = join_by(crs28992res500m == crs28992res500m, year == year)) |>
+  
+  mutate(nb_pv = ifelse(
+    is.na(huishoudens_t_minus_one),
+    #use t0 if previous year not available
+    (sum_teruglevering_t0 - (teruglevering * aantal_part_huishoudens)) / 
+      (n_t0 - aantal_part_huishoudens),
+    #use t-1 as default
+    (sum_teruglevering - (teruglevering_t_minus_one * huishoudens_t_minus_one)) /
+      (n_hh - huishoudens_t_minus_one))) 
+  
+
+#delete rows with zero residents
+df <- df |> filter(aantal_inwoners != 0)
+
+#descriptives
+summary(df$teruglevering)
+summary(df$nb_pv)
+
+df |>
+  filter(is.na(nb_pv)) |>
+  st_drop_geometry() |>
+  count(year)
+
+#The remaining 1293 missing are the only streets in a square
+df |>
+  st_drop_geometry() |>
+  filter(is.na(nb_pv)) |>
+  mutate(alone_in_square = case_when(
+    # default t-1 option
+    !is.na(huishoudens_t_minus_one) ~ n_hh == huishoudens_t_minus_one,
+    # when using t0 info
+    is.na(huishoudens_t_minus_one) ~ n_t0 == aantal_part_huishoudens
+  )) |>
+  count(alone_in_square)
+
+```
+
+Make function to impute missing data in certain years based on the exponential moving average of that street
+
+```{r}
+df <- df |> arrange(postcode_van, year)
+
+impute_ema <- function(df, target_year, history_years, var) {
+  imputed <- df |>
+    filter(is.na({{ var }}) & year == target_year) |>
+    pull(postcode_van) |>
+    unique() |>
+    sapply(function(pc) {
+      hist_values <- df |>
+        filter(postcode_van == pc, year %in% history_years) |>
+        arrange(year) |>
+        pull({{ var }}) |>
+        na.omit()
+      
+      if (length(hist_values) == 0 || all(is.na(hist_values))) {
+        NA_real_
+      } else if (length(hist_values) == 1) {
+        hist_values[1]
+      } else {
+        tail(EMA(hist_values, 2), 1)
+      }
+    }) |>
+    enframe(name = "postcode_van", value = "imputed_value")
+  
+  df |>
+    left_join(imputed, by = "postcode_van") |>
+    mutate({{ var }} := case_when(
+      is.na({{ var }}) & year == target_year ~ imputed_value,
+      .default = {{ var }}
+    )) |>
+    select(-imputed_value)
+}
+
+```
+
+Impute missing years
+
+```{r}
 
 df |> 
   group_by(year) |> 
-  summarise(missing_count = sum(is.na(percentage_koopwoningen))) # about 600 NAs in every year
+  summarise(missing_count = sum(is.na(percentage_hoog_inkomen_huishouden) & is.na(percentage_laag_inkomen_huishouden)))
 
-hist(df$percentage_koopwoningen)
-
-## property value
-summary(df$gemiddelde_woz_waarde_woning) #6219 NAs
 df |> 
   group_by(year) |> 
-  summarise(missing_count = sum(is.na(gemiddelde_woz_waarde_woning))) #no data in 2015 and 2024
+  summarise(missing_count = sum(is.na(gemiddelde_woz_waarde_woning)))
 
+df |> 
+  group_by(year) |> 
+  summarise(missing_count = sum(is.na(gemiddeld_elektriciteitsverbruik_woning)))
+
+
+df <- df |>
+  impute_ema(target_year = 2023, history_years = c(2021, 2022), var = percentage_laag_inkomen_huishouden) |>
+  impute_ema(target_year = 2024, history_years = c(2022, 2023), var = percentage_laag_inkomen_huishouden) |>
+  impute_ema(target_year = 2023, history_years = c(2021, 2022), var = percentage_hoog_inkomen_huishouden) |>
+  impute_ema(target_year = 2024, history_years = c(2022, 2023), var = percentage_hoog_inkomen_huishouden) |>
+  impute_ema(target_year = 2015, history_years = c(2017, 2016), var = gemiddelde_woz_waarde_woning) |>
+  impute_ema(target_year = 2024, history_years = c(2022, 2023), var = gemiddelde_woz_waarde_woning) |>
+  impute_ema(target_year = 2024, history_years = c(2022, 2023), var = gemiddeld_elektriciteitsverbruik_woning)
+
+
+
+```
+
+Calculating diversity measures: Herfindahl index.
+
+```{r}
+##economic diversity
+df <- df |>
+  mutate(
+    economic_diversity = 1 - ((percentage_hoog_inkomen_huishouden^2 +
+                                 percentage_laag_inkomen_huishouden^2 + 
+                                 (100 - percentage_hoog_inkomen_huishouden - percentage_laag_inkomen_huishouden)^2
+                                  ) 
+         / 10000 
+                                 )
+         )
+
+summary(df$economic_diversity)
+
+##ethnic diversity 
+
+df <- df |>
+  mutate(
+    ethnic_diversity = 1 - ((percentage_geb_nederland_herkomst_nederland_500^2 + (100 - percentage_geb_nederland_herkomst_nederland_500)^2) / 10000)
+  )
+
+summary(df$ethnic_diversity)
+
+df |> 
+  group_by(year) |> 
+  summarise(missing_count = sum(is.na(ethnic_diversity)))
+
+##age diversity
+
+#set number in age category to 0 if the total number of people is not missing
+df <- df |>
+  mutate(
+    aantal_inwoners_0_tot_15_jaar_500 = if_else(
+      is.na(aantal_inwoners_0_tot_15_jaar_500) & !is.na(aantal_inwoners_500),
+      0,
+      aantal_inwoners_0_tot_15_jaar_500
+    ),
+    aantal_inwoners_15_tot_25_jaar_500 = if_else(
+      is.na(aantal_inwoners_15_tot_25_jaar_500) & !is.na(aantal_inwoners_500),
+      0,
+      aantal_inwoners_15_tot_25_jaar_500
+    ),
+    aantal_inwoners_25_tot_45_jaar_500 = if_else(
+      is.na(aantal_inwoners_25_tot_45_jaar_500) & !is.na(aantal_inwoners_500),
+      0,
+      aantal_inwoners_25_tot_45_jaar_500
+    ),
+    aantal_inwoners_45_tot_65_jaar_500 = if_else(
+      is.na(aantal_inwoners_45_tot_65_jaar_500) & !is.na(aantal_inwoners_500),
+      0,
+      aantal_inwoners_45_tot_65_jaar_500
+    ),
+    aantal_inwoners_65_jaar_en_ouder_500 = if_else(
+      is.na(aantal_inwoners_65_jaar_en_ouder_500) & !is.na(aantal_inwoners_500),
+      0,
+      aantal_inwoners_65_jaar_en_ouder_500
+    )
+  )
+
+#calculate proportions
+df <- df |>
+  mutate(
+    percentage_inwoners_0_tot_15_jaar_500 = aantal_inwoners_0_tot_15_jaar_500 / aantal_inwoners_500,
+    percentage_inwoners_15_tot_25_jaar_500 = aantal_inwoners_15_tot_25_jaar_500 / aantal_inwoners_500,
+    percentage_inwoners_25_tot_45_jaar_500 = aantal_inwoners_25_tot_45_jaar_500 / aantal_inwoners_500,
+    percentage_inwoners_45_tot_65_jaar_500 = aantal_inwoners_45_tot_65_jaar_500 / aantal_inwoners_500,
+    percentage_inwoners_65_jaar_en_ouder_500 = aantal_inwoners_65_jaar_en_ouder_500 / aantal_inwoners_500,
+  )
+
+df <- df |>
+  mutate(
+    age_diversity = 1 - (percentage_inwoners_0_tot_15_jaar_500^2 +
+                    percentage_inwoners_15_tot_25_jaar_500^2 +
+                    percentage_inwoners_25_tot_45_jaar_500^2 +
+                    percentage_inwoners_45_tot_65_jaar_500^2 +
+                    percentage_inwoners_65_jaar_en_ouder_500^2)
+  )
+
+
+summary(df$age_diversity)
+
+df |> 
+  group_by(year) |> 
+  summarise(missing_count = sum(is.na(age_diversity)))
+
+```
+
+Add data on solar panel prices (source: <https://www.irena.org/Data/View-data-by-topic/Costs/Solar-costs>)
+
+```{r}
+df <- df |>
+  mutate(solar_cost = case_when(
+    year == 2015 ~ NA,
+    year == 2016 ~ 0.1291,
+    year == 2017 ~ 0.1430,
+    year == 2018 ~ 0.1092,
+    year == 2019 ~ 0.1040,
+    year == 2020 ~ 0.1006,
+    year == 2021 ~ 0.0836,
+    year == 2022 ~ 0.0912,
+    year == 2023 ~ 0.0699,
+    year == 2024 ~ NA
+  ))
+
+df <- df |>
+    impute_ema(target_year = 2015, history_years = c(2017, 2016), var = solar_cost) |>
+    impute_ema(target_year = 2024, history_years = c(2022, 2023), var = solar_cost)
+  
+summary(df$solar_cost)
+```
+
+Looking at descriptives.
+
+```{r}
+## income
+summary(df$percentage_laag_inkomen_huishouden)
+hist(df$percentage_laag_inkomen_huishouden)
+
+summary(df$percentage_hoog_inkomen_huishouden)
+hist(df$percentage_hoog_inkomen_huishouden)
+
+##property value
+summary(df$gemiddelde_woz_waarde_woning)
 hist(df$gemiddelde_woz_waarde_woning)
 
-## electricity use
-summary(df$gemiddeld_elektriciteitsverbruik_woning) #3476 NAs
-df |> 
-  group_by(year) |> 
-  summarise(missing_count = sum(is.na(gemiddeld_elektriciteitsverbruik_woning))) #no data in 2024
+## density/urbanity
+summary(df$omgevingsadressendichtheid)
+hist(df$omgevingsadressendichtheid)
 
+summary(df$stedelijkheid)
+hist(df$stedelijkheid)
+
+```
+
+Calculate electricity costs based on electricity price according to CBS (<https://opendata.cbs.nl/#/CBS/nl/dataset/85666NED/table>)
+
+```{r}
+## electricity use
+summary(df$gemiddeld_elektriciteitsverbruik_woning)
 hist(df$gemiddeld_elektriciteitsverbruik_woning)
 
-## age
-sum(is.na(df$aantal_inwoners_0_tot_15_jaar) & is.na(df$aantal_inwoners_15_tot_25_jaar) & is.na(df$aantal_inwoners_25_tot_45_jaar) & is.na(df$aantal_inwoners_45_tot_65_jaar) & is.na(df$aantal_inwoners_65_jaar_en_ouder)) #0 NAs!
+## add electricity price (CBS)
+df <- df |>
+  mutate(electricity_price = case_when(
+    #2015
+    gemiddeld_elektriciteitsverbruik_woning < 1000 & year == 2015 ~ -0.024,
+    gemiddeld_elektriciteitsverbruik_woning >= 1000 & gemiddeld_elektriciteitsverbruik_woning < 2500 & year == 2015 ~ 0.166,
+    gemiddeld_elektriciteitsverbruik_woning >= 2500 & gemiddeld_elektriciteitsverbruik_woning < 5000 & year == 2015 ~ 0.196,
+    gemiddeld_elektriciteitsverbruik_woning >= 5000 & gemiddeld_elektriciteitsverbruik_woning < 15000 & year == 2015 ~ 0.208,
+    #2016
+        gemiddeld_elektriciteitsverbruik_woning < 1000 & year == 2016 ~ -0.054,
+    gemiddeld_elektriciteitsverbruik_woning >= 1000 & gemiddeld_elektriciteitsverbruik_woning < 2500 & year == 2016 ~ 0.140,
+    gemiddeld_elektriciteitsverbruik_woning >= 2500 & gemiddeld_elektriciteitsverbruik_woning < 5000 & year == 2016 ~ 0.168,
+    gemiddeld_elektriciteitsverbruik_woning >= 5000 & gemiddeld_elektriciteitsverbruik_woning < 15000 & year == 2016 ~ 0.180,
+    #2017
+        gemiddeld_elektriciteitsverbruik_woning < 1000 & year == 2017 ~ -0.075,
+    gemiddeld_elektriciteitsverbruik_woning >= 1000 & gemiddeld_elektriciteitsverbruik_woning < 2500 & year == 2017 ~ 0.129,
+    gemiddeld_elektriciteitsverbruik_woning >= 2500 & gemiddeld_elektriciteitsverbruik_woning < 5000 & year == 2017 ~ 0.161,
+    gemiddeld_elektriciteitsverbruik_woning >= 5000 & gemiddeld_elektriciteitsverbruik_woning < 15000 & year == 2017 ~ 0.176,
+    #2018
+        gemiddeld_elektriciteitsverbruik_woning < 1000 & year == 2018 ~ -0.036,
+    gemiddeld_elektriciteitsverbruik_woning >= 1000 & gemiddeld_elektriciteitsverbruik_woning < 2500 & year == 2018 ~ 0.150,
+    gemiddeld_elektriciteitsverbruik_woning >= 2500 & gemiddeld_elektriciteitsverbruik_woning < 5000 & year == 2018 ~ 0.178,
+    gemiddeld_elektriciteitsverbruik_woning >= 5000 & gemiddeld_elektriciteitsverbruik_woning < 15000 & year == 2018 ~ 0.191,
+    #2019
+        gemiddeld_elektriciteitsverbruik_woning < 1000 & year == 2019 ~ 0.110,
+    gemiddeld_elektriciteitsverbruik_woning >= 1000 & gemiddeld_elektriciteitsverbruik_woning < 2500 & year == 2019 ~ 0.199,
+    gemiddeld_elektriciteitsverbruik_woning >= 2500 & gemiddeld_elektriciteitsverbruik_woning < 5000 & year == 2019 ~ 0.205,
+    gemiddeld_elektriciteitsverbruik_woning >= 5000 & gemiddeld_elektriciteitsverbruik_woning < 15000 & year == 2019 ~ 0.213,
+    #2020
+        gemiddeld_elektriciteitsverbruik_woning < 1000 & year == 2020 ~ -0.220,
+    gemiddeld_elektriciteitsverbruik_woning >= 1000 & gemiddeld_elektriciteitsverbruik_woning < 2500 & year == 2020 ~ 0.072,
+    gemiddeld_elektriciteitsverbruik_woning >= 2500 & gemiddeld_elektriciteitsverbruik_woning < 5000 & year == 2020 ~ 0.139,
+    gemiddeld_elektriciteitsverbruik_woning >= 5000 & gemiddeld_elektriciteitsverbruik_woning < 15000 & year == 2020 ~ 0.185,
+    #2021
+        gemiddeld_elektriciteitsverbruik_woning < 1000 & year == 2021 ~ -0.239,
+    gemiddeld_elektriciteitsverbruik_woning >= 1000 & gemiddeld_elektriciteitsverbruik_woning < 2500 & year == 2021 ~ 0.066,
+    gemiddeld_elektriciteitsverbruik_woning >= 2500 & gemiddeld_elektriciteitsverbruik_woning < 5000 & year == 2021 ~ 0.136,
+    gemiddeld_elektriciteitsverbruik_woning >= 5000 & gemiddeld_elektriciteitsverbruik_woning < 15000 & year == 2021 ~ 0.185,
+    #2022
+        gemiddeld_elektriciteitsverbruik_woning < 1000 & year == 2022 ~ -0.544,
+    gemiddeld_elektriciteitsverbruik_woning >= 1000 & gemiddeld_elektriciteitsverbruik_woning < 2500 & year == 2022 ~ -0.038,
+    gemiddeld_elektriciteitsverbruik_woning >= 2500 & gemiddeld_elektriciteitsverbruik_woning < 5000 & year == 2022 ~ 0.106,
+    gemiddeld_elektriciteitsverbruik_woning >= 5000 & gemiddeld_elektriciteitsverbruik_woning < 15000 & year == 2022 ~ 0.201,
+    #2023
+        gemiddeld_elektriciteitsverbruik_woning < 1000 & year == 2023 ~ 0.020,
+    gemiddeld_elektriciteitsverbruik_woning >= 1000 & gemiddeld_elektriciteitsverbruik_woning < 2500 & year == 2023 ~ 0.230,
+    gemiddeld_elektriciteitsverbruik_woning >= 2500 & gemiddeld_elektriciteitsverbruik_woning < 5000 & year == 2023 ~ 0.316,
+    gemiddeld_elektriciteitsverbruik_woning >= 5000 & gemiddeld_elektriciteitsverbruik_woning < 15000 & year == 2023 ~ 0.389,
+    #2024
+        gemiddeld_elektriciteitsverbruik_woning < 1000 & year == 2024 ~ -0.068,
+    gemiddeld_elektriciteitsverbruik_woning >= 1000 & gemiddeld_elektriciteitsverbruik_woning < 2500 & year == 2024 ~ 0.174,
+    gemiddeld_elektriciteitsverbruik_woning >= 2500 & gemiddeld_elektriciteitsverbruik_woning < 5000 & year == 2024 ~ 0.235,
+    gemiddeld_elektriciteitsverbruik_woning >= 5000 & gemiddeld_elektriciteitsverbruik_woning < 15000 & year == 2024 ~ 0.270,
+  ))
 
-sum(df$aantal_inwoners == 0) #but 411 streets with 0 residents
+summary(df$electricity_price)
+
+## calculate electricity cost
+df <- df |>
+  mutate(electricity_cost = electricity_price * gemiddeld_elektriciteitsverbruik_woning)
+
+summary(df$electricity_cost)
+
+
+```
+
+Control variables
+
+```{r}
+## home ownership
+summary(df$percentage_koopwoningen)
+summary(df$percentage_huurwoningen)
+
+df |> filter(is.na(percentage_koopwoningen) & is.na(percentage_huurwoningen)) |> summarise(count = n())
+
+#unnecessary missings
+df <- df |>
+  mutate(percentage_koopwoningen = if_else (
+    is.na(percentage_koopwoningen) & !is.na(percentage_huurwoningen),
+    100 - percentage_huurwoningen,
+    percentage_koopwoningen
+  ))
+
+## ethnicity
+summary(df$percentage_geb_nederland_herkomst_nederland)
+hist(df$percentage_geb_nederland_herkomst_nederland)
+
+## age
+sum(is.na(df$aantal_inwoners_0_tot_15_jaar) & is.na(df$aantal_inwoners_15_tot_25_jaar) & is.na(df$aantal_inwoners_25_tot_45_jaar) & is.na(df$aantal_inwoners_45_tot_65_jaar) & is.na(df$aantal_inwoners_65_jaar_en_ouder))
+
 
 #estimating the average age
 df <- df |>
@@ -162,61 +487,47 @@ df <- df |>
 summary(df$age_avg)
 hist(df$age_avg)
 
-## income
-summary(df$gemiddeld_inkomen_huishouden) #15858 NAs
-df |> 
-  group_by(year) |> 
-  summarise(missing_count = sum(is.na(gemiddeld_inkomen_huishouden))) #data only from 2021 and 2022
-
-hist(df$gemiddeld_inkomen_huishouden)
-
-summary(df$percentage_laag_inkomen_huishouden) #7793 NAs
-df |> 
-  group_by(year) |> 
-  summarise(missing_count = sum(is.na(percentage_laag_inkomen_huishouden))) #no data in 2023 and 2024
-
-hist(df$percentage_laag_inkomen_huishouden)
-
-summary(df$percentage_hoog_inkomen_huishouden) #7796 NAs
-hist(df$percentage_hoog_inkomen_huishouden)
-
-
-## density/urbanity
-summary(df$omgevingsadressendichtheid) #106 NAs
-hist(df$omgevingsadressendichtheid)
-
-summary(df$stedelijkheid) #106 NAs
-hist(df$stedelijkheid)
-
 ```
 
-Calculate the spatial autocorrelation.
+Calculate the spatial autocorrelation. Appears to increase slightly over time (0.25 -\> 0.30).
+
+```{r}
+years <- c(2015:2018, 2021:2024)
+moran_results_list <- list()
+
+for (yr in years) {
+  
+  # Filter for the specific year
+  df_yr <- df |> filter(year == yr)
+    
+    # Create neighbor list
+    nb <- poly2nb(df_yr)
+    
+    # Create weights list
+    lw <- nb2listw(nb, style = "W", zero.policy = TRUE)
+    
+    # Run Moran's I test and store it in the list using the year as the name
+    moran_results_list[[as.character(yr)]] <- moran.test(df_yr$teruglevering, 
+                                                         lw, 
+                                                         zero.policy = TRUE)
+    
+}
+
+str(moran_results_list)
+```
+
+Clean columns a bit
 
 ```{r}
 
-df_24 <- df |> filter (year == 2024)
+df <- df |>
+  select (-c(year_t_minus_one, n_hh, n_t0, teruglevering_t_minus_one, huishoudens_t_minus_one, sum_teruglevering_t0, crs28992res500m_t_minus_one)) |>
+  relocate()
 
-nb <- poly2nb(df_24)
-
-lw <- nb2listw(nb, style = "W", zero.policy = T)
-
-moran_result <- moran.test(df_24$teruglevering, lw, zero.policy = TRUE)
 ```
 
-Analysis:
+Save data ready to use for analysis
 
--   Spatial lag panel model (slpm package)?
-
--   Social network analysis?
-
--   Panel/multilevel regression with installed base effect (energy feed-in by "neighbors" in the previous year)
-
-    -   This allows you to interact on the installed-base variable. But:
-
-        -   For the effect of density/urbanity, you have focus on the influence between two streets in the same 500m by 500m square. How?
-
-        -   For the effect of demographic similarity, you have to calculate the similarity for each combination of streets and use that in the interaction with the installed-base variable. How?
-
--   Weight matrix by distance or "queen" contiguity?
-
--   For the effect of lucrativity, look at period effect? Or add data per year with installation price and eletricity price?
+```{r}
+st_write(df, "./data/data_analysis.gpkg", append = FALSE)
+```
