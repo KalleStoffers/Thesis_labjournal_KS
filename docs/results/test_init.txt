@@ -1,0 +1,213 @@
+							************************
+									 ./results/test_init.txt
+							************************
+
+Filename is ./results/test_init.txt.
+
+This file contains primary output for SIENA project <<./results/test_init>>.
+
+Date and time: 25/03/2026 09:56:47 
+
+RSiena version 1.5.0 (06 07 2025)
+
+
+@1
+Data input.
+===========
+
+3 observations,
+3 actors,
+1 dependent network variables,
+0 dependent bipartite variables,
+1 dependent discrete behavior variables,
+0 dependent continuous behavior variables,
+0 constant actor covariates,
+1 exogenous changing actor covariates,
+0 constant dyadic covariates,
+0 exogenous changing dyadic covariates,
+0 no files with times of composition change.
+
+
+@2
+Reading network variables.
+--------------------------
+
+Name of network variable: net.
+oneMode network.
+For observation moment 1, degree distributions are as follows:
+Nodes
+1 2 3
+out-degrees
+1 2 1
+in-degrees
+1 2 1
+
+No missing data for observation 1.
+
+For observation moment 2, degree distributions are as follows:
+Nodes
+1 2 3
+out-degrees
+1 2 1
+in-degrees
+1 2 1
+
+No missing data for observation 2.
+
+For observation moment 3, degree distributions are as follows:
+Nodes
+1 2 3
+out-degrees
+1 2 1
+in-degrees
+1 2 1
+
+No missing data for observation 3.
+
+
+
+
+
+@2
+Reading dependent actor variables.
+----------------------------------
+
+1st dependent actor variable named pv.
+Maximum and minimum rounded values are 0 and 1.
+
+
+A total of 1 dependent actor variable.
+
+Number of missing cases per observation:
+ observation         1         2         3		overall
+pv                   0         0         0         0	  ( 0.0 %)
+
+Means per observation:
+ observation         1         2         3		overall
+pv                 0.333     0.667     1.000     0.667
+
+@2
+Reading exogenous changing actor covariates.
+--------------------------------------------
+
+1 variable, named:
+ses             
+
+A total of 1 exogenous changing actor covariate.
+
+Number of missing cases per period:
+ period                    1       2     overall
+ses                        0       0        0 	   ( 0.0 %)
+
+Information about changing covariates:
+
+              minimum  maximum	  mean  centered 
+ses                                        Y 
+	period   1     2.0     8.0      4.333 
+	period   2     3.0     7.0      4.667 
+Overall                            4.500 
+
+The mean value is subtracted from the centered covariate.
+
+
+
+All network changes are upward.
+This will be respected in the simulations.
+Therefore, there is no outdegree parameter.
+
+All network changes are downward.
+This will be respected in the simulations.
+Therefore, there is no outdegree parameter.
+
+
+Behavior variable pv:
+All behavior changes are upward.
+This will be respected in the simulations.
+Therefore, there is no linear shape parameter.
+
+The mean structural dissimilarity value subtracted in the
+balance calculations is         0.6667.
+
+For the similarity variable calculated from each actor covariate,
+the mean is subtracted.
+These means are:
+Similarity pv                       :       0.3333 
+Similarity ses                      :       0.4444 
+
+
+
+@1
+Initial data description.
+=========================
+
+
+@2
+Change in networks:
+-------------------
+
+For the following statistics, missing values (if any) are not counted.
+All   observed networks are symmetric.
+Therefore, it is assumed that this is an analysis of an non-directed relation.
+
+Network density indicators:
+observation time              1      2      3
+density                    0.667  0.667  0.667
+average degree             1.333  1.333  1.333
+number of ties                 2      2      2
+missing fraction           0.000  0.000  0.000
+
+The average degree is 1.333 
+
+
+Edge changes between subsequent observations:
+ periods        0 =>  0   0 =>  1   1 =>  0   1 =>  1   Distance Jaccard   Missing
+  1 ==>   2         1         0         0         2         0     1.000         0 (0%)
+  2 ==>   3         1         0         0         2         0     1.000         0 (0%)
+
+The distances reported in the output file for conditional estimation
+ for the network variable refer to the total symmetric adjacency matrix,
+ and therefore are double the distance reported above.)
+
+Directed dyad Counts:
+ observation    total    mutual    asymm.     null
+     1.             6        4         0         2
+     2.             6        4         0         2
+     3.             6        4         0         2
+
+Standard values for initial parameter values
+-------------------------------------------------
+
+constant net rate (period 1)            0.1500 
+constant net rate (period 2)            0.1500 
+
+
+
+@2
+Dependent discrete actor variables:
+-----------------------------------
+
+pv 
+
+
+@3
+Marginal distribution
+                     
+                Observations
+values               1     2     3
+                ------------------
+  0                  2     1     0
+  1                  1     2     3
+No missings
+
+
+
+@3
+Changes
+       
+ periods    actors:  down   up   constant  missing  ;   steps:   down    up  total
+  1  =>  2             0     1       2         0                    0     1     1
+  2  =>  3             0     1       2         0                    0     1     1
+
+For this variable, the standard initial behavioral tendency parameter is 
+
+Initialisation of project <<./results/test_init>> executed succesfully.

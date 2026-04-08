@@ -1,0 +1,185 @@
+---
+title: "First analyses"
+author: "Kalle Stoffers"
+date: "2026-04-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list=ls())
+
+library(tidyverse)
+library(sf)
+library(tmap)
+library(spdep)
+library(lme4)
+library(lmerTest)
+
+
+df <- st_read("./data/df_analysis.gpkg")
+```
+
+## Plots
+
+```{r}
+
+hist(df$teruglevering)
+
+df |>
+  group_by(year) |>
+  summarise(yearly_avg = mean(teruglevering, na.rm = TRUE)) |>
+  ggplot(aes(x = year, y = yearly_avg)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_x_continuous(breaks = seq(min(df$year), max(df$year), by = 2))+
+  theme_minimal()
+```
+
+On a map, using ggplot:
+
+```{r}
+df |>
+  filter(year == 2024) |>
+  ggplot(
+    aes(fill = teruglevering)
+  ) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c(option = "plasma", name = "Energy feed-in") +
+  theme_minimal()
+
+```
+
+Using tmap
+
+```{r}
+tmap_mode("plot")
+
+tm_shape(df) +
+  tm_fill("teruglevering") +
+  tm_facets(by = "year")
+
+
+```
+
+Calculate spatial autocorrelation over time
+
+```{r}
+years <- c(2016:2019, 2022:2024)
+moran_results_list <- list()
+
+for (yr in years) {
+  
+  # Filter for the specific year
+  df_yr <- df |> filter(year == yr)
+    
+    # Create neighbor list
+    nb <- poly2nb(df_yr)
+    
+    # Create weights list
+    lw <- nb2listw(nb, style = "W", zero.policy = TRUE)
+    
+    # Run Moran's I test and store it in the list using the year as the name
+    moran_results_list[[as.character(yr)]] <- moran.test(df_yr$teruglevering, 
+                                                         lw, 
+                                                         zero.policy = TRUE)
+    
+}
+
+str(moran_results_list)
+```
+
+Bivariate plot
+
+```{r}
+df |>
+  ggplot(aes(x = nb_pv, y = teruglevering)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth() +
+  theme_minimal() +
+  xlab("Neighborhood energy feed-in at t-1") +
+  ylab("Energy feed-in at t=0")
+```
+
+## First models
+
+```{r}
+#null-model, ICC = 34.7%. 
+model0 <- lmer(teruglevering ~ (1 | postcode_van), REML = F, data = df)
+summary(model0)
+149.9 / (149.9 + 282.3)
+
+#model1 with random interept and fixed effect of time
+model1 <- lmer(teruglevering ~ (1 | postcode_van) + year, REML = F, data = df)
+summary(model1)
+
+#model2 with random effect of time does not coverge
+
+#model3 with random  intercept and fixed effect of time and nb_pv
+model3 <- lmer(teruglevering ~ (1 | postcode_van) + year + nb_pv, REML = F, data = df)
+summary(model3)
+
+#model4
+model4 <- lmer(teruglevering ~ (1 + nb_pv | postcode_van) + year + nb_pv, REML = F, data = df)
+summary(model4)
+
+
+#model4_2
+df <- df |> 
+  mutate(nb_pv_sq = nb_pv^2)
+
+model4_2 <- lmer(teruglevering ~ (1 + nb_pv | postcode_van) + year + nb_pv + nb_pv_sq, REML = F, data = df)
+summary(model4_2)
+
+
+```
+
+```{r}
+
+model9 <- lmer(scale(teruglevering) ~ (1 + scale(nb_pv) | postcode_van) 
+               + scale(nb_pv) * (
+                + scale(percentage_hoog_inkomen_huishouden)
+                + scale(percentage_laag_inkomen_huishouden)
+                + scale(gemiddelde_woz_waarde_woning)
+                + scale(solar_cost)
+                + scale(electricity_price)
+                + scale(economic_diversity)
+                + scale(ethnic_diversity)
+                + scale(age_diversity)
+                + scale(omgevingsadressendichtheid)
+                + scale(stedelijkheid)
+                + scale(percentage_koopwoningen))
+               + year 
+               + scale(nb_pv)
+               + scale(nb_pv_sq)
+               + scale(percentage_hoog_inkomen_huishouden)
+               + scale(percentage_laag_inkomen_huishouden)
+               + scale(gemiddelde_woz_waarde_woning)
+               + scale(solar_cost)
+               + scale(electricity_price)
+               + scale(economic_diversity)
+               + scale(ethnic_diversity)
+               + scale(age_diversity)
+               + scale(omgevingsadressendichtheid)
+               + scale(stedelijkheid)
+               + scale(percentage_koopwoningen)
+               + scale(percentage_geb_nederland_herkomst_nederland)
+               + scale(age_avg), REML = T, data = df)
+summary(model9)
+```
+
+## Future
+
+-   Check collinearity with time
+
+-   Impute missing data with spatial interpolation?
+
+-   Non-linear interaction effects?
+
+-   How much the variance in nb_pv do I explain?
+
+-   Rescaling method?

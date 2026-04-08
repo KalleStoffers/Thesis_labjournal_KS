@@ -9,10 +9,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
-<meta name="author" content="by: Kalle Stoffers" />
+<meta name="author" content="Kalle Stoffers" />
 
+<meta name="date" content="2026-03-24" />
 
-<title>Lab journal Thesis</title>
+<title>lab4</title>
 
 <script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -386,19 +387,59 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Lab journal Thesis</h1>
-<h4 class="author">by: Kalle Stoffers</h4>
+<h1 class="title toc-ignore">lab4</h1>
+<h4 class="author">Kalle Stoffers</h4>
+<h4 class="date">2026-03-24</h4>
 
 </div>
 
 
-<div id="my-lab-journal" class="section level1" number="1">
-<h1><span class="header-section-number">1</span> My Lab Journal</h1>
-<p>Last compiled on april, 2026</p>
-<p>Here I will post updates on the progress of my thesis.</p>
+<div id="first-analyses" class="section level2" number="1">
+<h2><span class="header-section-number">1</span> First analyses</h2>
+<p>Relevant packages</p>
+<pre class="r"><code>rm(list=ls())
+
+library(tidyverse)</code></pre>
+<p>Small Rsiena model??</p>
+<pre class="r"><code>library(RSiena)
+
+id &lt;- c(1,1,1, 2,2,2, 3,3,3)
+year &lt;- c(1,2,3, 1,2,3, 1,2,3)
+pv &lt;- c(0,0,1, 0,1,1, 1,1,1)
+ses &lt;- c(8,7,8, 2,3,3, 3,4,5)
+ex_df &lt;- tibble(id, year, pv, ses)
+
+adj_matrix &lt;- matrix(c(0, 1, 0,  
+                       1, 0, 1,  
+                       0, 1, 0),
+                     nrow = 3, 
+                     ncol = 3, 
+                     byrow = TRUE))
+
+matrix_w1 &lt;- adj_matrix
+matrix_w2 &lt;- adj_matrix
+matrix_w3 &lt;- adj_matrix
+
+net_array &lt;- array(data = c(matrix_w1, matrix_w2, matrix_w3), dim = c(dim(matrix_w1), 3))
+net &lt;- sienaDependent(net_array)
+
+pv_matrix &lt;- matrix(ex_df$pv, nrow = 3, ncol = 3, byrow = TRUE)
+pv_matrix
+pv &lt;- sienaDependent(pv_matrix, type = &quot;behavior&quot;)
+
+ses_matrix &lt;- pv_matrix &lt;- matrix(ex_df$ses, nrow = 3, ncol = 3, byrow = TRUE)
+ses_matrix
+ses &lt;- varCovar(ses_matrix)
+
+mydata &lt;- sienaDataCreate(net, pv, ses)
+myeff &lt;- getEffects(mydata)
+
+print01Report(mydata, modelname = &quot;./results/test_init&quot;)
+
+myeff &lt;- includeEffects(myeff, )</code></pre>
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIkxhYiBqb3VybmFsIFRoZXNpcyINCmF1dGhvcjogImJ5OiBLYWxsZSBTdG9mZmVycyINCmJpYmxpb2dyYXBoeTogcmVmZXJlbmNlcy5iaWINCi0tLQ0KDQojIE15IExhYiBKb3VybmFsDQoNCkxhc3QgY29tcGlsZWQgb24gYHIgZm9ybWF0KFN5cy50aW1lKCksICclQiwgJVknKWANCg0KDQpIZXJlIEkgd2lsbCBwb3N0IHVwZGF0ZXMgb24gdGhlIHByb2dyZXNzIG9mIG15IHRoZXNpcy4NCg==</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogImxhYjQiDQphdXRob3I6ICJLYWxsZSBTdG9mZmVycyINCmRhdGU6ICIyMDI2LTAzLTI0Ig0Kb3V0cHV0OiBodG1sX2RvY3VtZW50DQotLS0NCg0KYGBge3Igc2V0dXAsIGluY2x1ZGU9RkFMU0V9DQprbml0cjo6b3B0c19jaHVuayRzZXQoZWNobyA9IFRSVUUsIGV2YWw9RikNCmBgYA0KDQojIyBGaXJzdCBhbmFseXNlcw0KDQpSZWxldmFudCBwYWNrYWdlcw0KDQpgYGB7cn0NCnJtKGxpc3Q9bHMoKSkNCg0KbGlicmFyeSh0aWR5dmVyc2UpDQpgYGANCg0KU21hbGwgUnNpZW5hIG1vZGVsPz8NCg0KYGBge3J9DQpsaWJyYXJ5KFJTaWVuYSkNCg0KaWQgPC0gYygxLDEsMSwgMiwyLDIsIDMsMywzKQ0KeWVhciA8LSBjKDEsMiwzLCAxLDIsMywgMSwyLDMpDQpwdiA8LSBjKDAsMCwxLCAwLDEsMSwgMSwxLDEpDQpzZXMgPC0gYyg4LDcsOCwgMiwzLDMsIDMsNCw1KQ0KZXhfZGYgPC0gdGliYmxlKGlkLCB5ZWFyLCBwdiwgc2VzKQ0KDQphZGpfbWF0cml4IDwtIG1hdHJpeChjKDAsIDEsIDAsICANCiAgICAgICAgICAgICAgICAgICAgICAgMSwgMCwgMSwgIA0KICAgICAgICAgICAgICAgICAgICAgICAwLCAxLCAwKSwNCiAgICAgICAgICAgICAgICAgICAgIG5yb3cgPSAzLCANCiAgICAgICAgICAgICAgICAgICAgIG5jb2wgPSAzLCANCiAgICAgICAgICAgICAgICAgICAgIGJ5cm93ID0gVFJVRSkpDQoNCm1hdHJpeF93MSA8LSBhZGpfbWF0cml4DQptYXRyaXhfdzIgPC0gYWRqX21hdHJpeA0KbWF0cml4X3czIDwtIGFkal9tYXRyaXgNCg0KbmV0X2FycmF5IDwtIGFycmF5KGRhdGEgPSBjKG1hdHJpeF93MSwgbWF0cml4X3cyLCBtYXRyaXhfdzMpLCBkaW0gPSBjKGRpbShtYXRyaXhfdzEpLCAzKSkNCm5ldCA8LSBzaWVuYURlcGVuZGVudChuZXRfYXJyYXkpDQoNCnB2X21hdHJpeCA8LSBtYXRyaXgoZXhfZGYkcHYsIG5yb3cgPSAzLCBuY29sID0gMywgYnlyb3cgPSBUUlVFKQ0KcHZfbWF0cml4DQpwdiA8LSBzaWVuYURlcGVuZGVudChwdl9tYXRyaXgsIHR5cGUgPSAiYmVoYXZpb3IiKQ0KDQpzZXNfbWF0cml4IDwtIHB2X21hdHJpeCA8LSBtYXRyaXgoZXhfZGYkc2VzLCBucm93ID0gMywgbmNvbCA9IDMsIGJ5cm93ID0gVFJVRSkNCnNlc19tYXRyaXgNCnNlcyA8LSB2YXJDb3ZhcihzZXNfbWF0cml4KQ0KDQpteWRhdGEgPC0gc2llbmFEYXRhQ3JlYXRlKG5ldCwgcHYsIHNlcykNCm15ZWZmIDwtIGdldEVmZmVjdHMobXlkYXRhKQ0KDQpwcmludDAxUmVwb3J0KG15ZGF0YSwgbW9kZWxuYW1lID0gIi4vcmVzdWx0cy90ZXN0X2luaXQiKQ0KDQpteWVmZiA8LSBpbmNsdWRlRWZmZWN0cyhteWVmZiwgKQ0KDQpgYGANCg==</div>
 
 
 </div>
@@ -436,7 +477,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
-  window.initializeSourceEmbed("index.Rmd");
+  window.initializeSourceEmbed("lab4.Rmd");
   window.initializeCodeFolding("show" === "show");
 });
 </script>

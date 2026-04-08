@@ -127,7 +127,7 @@ cbs_pc6_westland <- cbs_pc6 |>
   ) |>
   relocate(postcode6, geom, year, id, POSTCODE_VAN, POSTCODE_TOT, STRAATNAAM, X.Leveringsrichting)
 
-rm(cbs_pc6, meerdere_postcodes)
+rm(cbs_pc6, meerdere_postcode)
 gc()
 
 ```
@@ -214,22 +214,36 @@ cbs_500_23 <- st_read(dsn = "C:/Users/kalle/Downloads/2025-cbs_vk500_2023_v2/cbs
 cbs_500_22 <- st_read(dsn = "C:/Users/kalle/Downloads/2025-cbs_vk500_2022_vol/cbs_vk500_2022_vol.gpkg") |>
   mutate (year = 2022)
 cbs_500_21 <- st_read(dsn = "C:/Users/kalle/Downloads/2024-cbs_vk500_2021_vol/cbs_vk500_2021_vol.gpkg") |>
-  mutate (year = 2021)
+  mutate (year = 2021) |>
+  rename(percentage_geb_nederland_herkomst_nederland = percentage_nederlandse_achtergrond)
 cbs_500_20 <- st_read(dsn = "C:/Users/kalle/Downloads/2023-cbs_vk500_2020_vol/cbs_vk500_2020_vol.gpkg") |>
-  mutate (year = 2020)
+  mutate (year = 2020) |>
+  rename(percentage_geb_nederland_herkomst_nederland = percentage_nederlandse_achtergrond)
 cbs_500_19 <- st_read(dsn = "C:/Users/kalle/Downloads/2023-cbs_vk500_2019_vol2/cbs_vk500_2019_vol2.gpkg") |>
-  mutate (year = 2019)
+  mutate (year = 2019) |>
+  rename(percentage_geb_nederland_herkomst_nederland = percentage_nederlandse_achtergrond)
 cbs_500_18 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_vk500_2018.gpkg") |>
   mutate (year = 2018) |>
-  rename(crs28992res500m = c28992r500)
+  rename(crs28992res500m = c28992r500, 
+         percentage_geb_nederland_herkomst_nederland = percentage_nederlandse_achtergrond)
 cbs_500_17 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_vk500_2017.gpkg") |>
   mutate (year = 2017) |>
-  rename(crs28992res500m = c28992r500)
+  rename(crs28992res500m = c28992r500,
+         percentage_geb_nederland_herkomst_nederland = percentage_nederlandse_achtergrond)
 
 cbs_500_16 <- st_read(dsn = "C:/Users/kalle/Downloads/2019-cbs_vk500_2016_v2/CBS_VK500_2016_v2.shp") |>
   mutate (year = 2016) |>
   rename(
     crs28992res500m = C28992R500,
+    aantal_inwoners = INWONER,
+    aantal_inwoners_0_tot_15_jaar = INW_014,
+    aantal_inwoners_15_tot_25_jaar = INW_1524,
+    aantal_inwoners_25_tot_45_jaar = INW_2544,
+    aantal_inwoners_45_tot_65_jaar = INW_4564,
+    aantal_inwoners_65_jaar_en_ouder = INW_65PL,
+    percentage_geb_nederland_herkomst_nederland = P_NL_ACHTG,
+    percentage_westerse_migr_achtergr = P_WE_MIG_A,
+    percentage_niet_westerse_migr_achtergr = P_NW_MIG_A,
     percentage_laag_inkomen_huishouden = P_LINK_HH, 
     percentage_hoog_inkomen_huishouden = P_HINK_HH, 
     omgevingsadressendichtheid = OAD, 
@@ -241,6 +255,15 @@ cbs_500_15 <- st_read(dsn = "C:/Users/kalle/Downloads/2019-cbs_vk500_2015_v2/CBS
   mutate (year = 2015) |>
   rename(
     crs28992res500m = C28992R500,
+    aantal_inwoners = INWONER,
+    aantal_inwoners_0_tot_15_jaar = INW_014,
+    aantal_inwoners_15_tot_25_jaar = INW_1524,
+    aantal_inwoners_25_tot_45_jaar = INW_2544,
+    aantal_inwoners_45_tot_65_jaar = INW_4564,
+    aantal_inwoners_65_jaar_en_ouder = INW_65PL,
+    percentage_geb_nederland_herkomst_nederland = P_NL_ACHTG,
+    percentage_westerse_migr_achtergr = P_WE_MIG_A,
+    percentage_niet_westerse_migr_achtergr = P_NW_MIG_A,
     percentage_laag_inkomen_huishouden = P_LINK_HH, 
     percentage_hoog_inkomen_huishouden = P_HINK_HH, 
     omgevingsadressendichtheid = OAD, 
@@ -248,17 +271,52 @@ cbs_500_15 <- st_read(dsn = "C:/Users/kalle/Downloads/2019-cbs_vk500_2015_v2/CBS
     geom = geometry
   )
 
-cbs_500 <- bind_rows(cbs_500_24, cbs_500_23, cbs_500_22, cbs_500_21, cbs_500_20, cbs_500_19, cbs_500_18, cbs_500_17, cbs_500_16, cbs_500_15) |>
-  
-  select(crs28992res500m, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, M_INKHH, omgevingsadressendichtheid, stedelijkheid, geom, year)|>
-  
-  relocate(crs28992res500m, geom, year, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, M_INKHH, omgevingsadressendichtheid, stedelijkheid) |>
-  
-  mutate(across(where(is.numeric), ~na_if(., -99997))) |>
-  mutate(across(where(is.numeric), ~na_if(., -99995)))
+cbs_500 <- bind_rows(cbs_500_24, cbs_500_23, cbs_500_22, cbs_500_21, cbs_500_20, cbs_500_19, cbs_500_18, cbs_500_17, cbs_500_16, cbs_500_15) 
 
 rm(cbs_500_24, cbs_500_23, cbs_500_22, cbs_500_21, cbs_500_20, cbs_500_19, cbs_500_18, cbs_500_17, cbs_500_16, cbs_500_15)
 gc()
+
+cbs_500 <- cbs_500 |>
+  
+  select(crs28992res500m, 
+          aantal_inwoners,
+          aantal_inwoners_0_tot_15_jaar,
+          aantal_inwoners_15_tot_25_jaar,
+          aantal_inwoners_25_tot_45_jaar,
+          aantal_inwoners_45_tot_65_jaar,
+          aantal_inwoners_65_jaar_en_ouder,
+          percentage_geb_nederland_herkomst_nederland,
+          percentage_laag_inkomen_huishouden,
+          percentage_hoog_inkomen_huishouden, 
+          omgevingsadressendichtheid, 
+          stedelijkheid, 
+          geom, 
+          year)|>
+  
+  relocate(crs28992res500m, geom, year,
+          aantal_inwoners_0_tot_15_jaar,
+          aantal_inwoners_15_tot_25_jaar,
+          aantal_inwoners_25_tot_45_jaar,
+          aantal_inwoners_45_tot_65_jaar,
+          aantal_inwoners_65_jaar_en_ouder,
+          percentage_geb_nederland_herkomst_nederland,
+          percentage_laag_inkomen_huishouden,
+          percentage_hoog_inkomen_huishouden, 
+          omgevingsadressendichtheid, 
+          stedelijkheid) |>
+  
+    rename(
+          aantal_inwoners_500 = aantal_inwoners,
+          aantal_inwoners_0_tot_15_jaar_500 = aantal_inwoners_0_tot_15_jaar,
+          aantal_inwoners_15_tot_25_jaar_500 = aantal_inwoners_15_tot_25_jaar,
+          aantal_inwoners_25_tot_45_jaar_500 = aantal_inwoners_25_tot_45_jaar,
+          aantal_inwoners_45_tot_65_jaar_500 = aantal_inwoners_45_tot_65_jaar,
+          aantal_inwoners_65_jaar_en_ouder_500 = aantal_inwoners_65_jaar_en_ouder,
+          percentage_geb_nederland_herkomst_nederland_500 = percentage_geb_nederland_herkomst_nederland
+  ) |>
+  
+  mutate(across(where(is.numeric), ~na_if(., -99997))) |>
+  mutate(across(where(is.numeric), ~na_if(., -99995)))
 ```
 
 Now we join the squares with the postal code areas based on the largest overlapping area.
@@ -267,7 +325,12 @@ Now we join the squares with the postal code areas based on the largest overlapp
 #match the squares belonging to the postal code area and keep only the square coordinates
 df <- df |>
   st_join(cbs_500,join = st_intersects, left = T, largest = T) |>
-  select(-c(year.y, gemiddeld_inkomen_huishouden, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid, M_INKHH))
+  select(-c(year.y, aantal_inwoners_500, aantal_inwoners_0_tot_15_jaar_500,
+          aantal_inwoners_15_tot_25_jaar_500,
+          aantal_inwoners_25_tot_45_jaar_500,
+          aantal_inwoners_45_tot_65_jaar_500,
+          aantal_inwoners_65_jaar_en_ouder_500,
+          percentage_geb_nederland_herkomst_nederland_500, percentage_laag_inkomen_huishouden, percentage_hoog_inkomen_huishouden, omgevingsadressendichtheid, stedelijkheid))
 
 #match the square attributes in the right year
 df <- df |>
@@ -280,6 +343,6 @@ df <- df |>
 Saving the data!
 
 ```{r eval=FALSE}
-st_write(df, "./data/merged_data.gpkg")
+st_write(df, "./data/merged_data.gpkg", append = FALSE)
 
 ```
