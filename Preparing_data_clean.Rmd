@@ -20,6 +20,8 @@ library(TTR)
 
 ## Step 1: PV data
 
+To measure the amount of solar panels, we use open data from energy provider Westland Infra (<https://westlandinfra.nl/over-westland-infra/duurzaamheid-innovaties/open-data/>). As a dependent variable, we use the percentage of connections ("aansluitingen") in a street that have a net negative electricity usage, as this is indicative of the solar panel adoption in the street.
+
 ```{r}
 pv <- readRDS("./data/pv_data.Rds") |>
   filter(year >= 2015) |>
@@ -34,14 +36,14 @@ pv <- readRDS("./data/pv_data.Rds") |>
 class(pv$leveringsrichting)
 pv$leveringsrichting <- as.numeric(gsub(",", ".", pv$leveringsrichting))
 
-#reverse 
+#the original variable represents the percentage with a positive electricity usage, we are interested in the opposite so we reverse the variable
 pv <- pv |> mutate(teruglevering = 100 - leveringsrichting)
 
 ```
 
 ## Step 2: PC6 data
 
-These data can be downloaded here: <https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode>. After 1st of may the data of 2019 and 2020 should be available as well!
+We can connect these streets in the Westland region to demographic data at the postal code level from the CBS. These data can be downloaded here: <https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode>. After 1st of may the data of 2019 and 2020 should be available as well!
 
 ```{r}
 #load data
@@ -112,7 +114,7 @@ rm(cbs_pc6_2124, cbs_pc6_1518)
 gc()
 ```
 
-Select the postal codes of the CBS data that are included in the PV data
+Some streets in the PV data span across multiple PC6 postal codes. Therefore we first select all of the postal codes of the CBS data that are included in the PV data.
 
 ```{r}
 cbs_pc6_westland <- cbs_pc6 |>
@@ -129,7 +131,7 @@ rm(cbs_pc6)
 gc()
 ```
 
-Some streets in the pv data match with multiple pc6 postal codes, so we have to summarise them back together.
+Now we have to transform the data from the single postal codes of the CBS to the areas containing one or more postal codes in the PV data.
 
 ```{r}
 df_pc6 <- cbs_pc6_westland |>
@@ -198,7 +200,7 @@ gc()
 
 ## Step 3: 500m \* 500m data
 
-This data can be downloaded here: [https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/kaart-van-500-meter-bij-500-meter-met-statistieken](#0){.uri}
+Some data, such as density and income is only available at the level of 500m by 500m squares. We also use these squares to calculate the demographic diversity of the surrounding neighborhood. These will also be the areas used to calculate the effect of neighborhood solar panels. The data can be downloaded here: [https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/kaart-van-500-meter-bij-500-meter-met-statistieken](#0){.uri}
 
 ```{r}
 cbs_500_24 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_vk500_2024_v1.gpkg") |>
@@ -334,6 +336,8 @@ df_cbs <- df_cbs |>
   mutate(across(where(is.numeric), ~na_if(., NaN)))
 ```
 
+Save the raw CBS data
+
 ```{r}
 st_write(df_cbs, "./data/raw_df_cbs.gpkg", append = FALSE)
 rm(cbs_500, df_pc6)
@@ -341,7 +345,11 @@ rm(cbs_500, df_pc6)
 
 ## Step 4: calculate relevant variables and impute missing years
 
-Write function to impute data for missing years
+```{r}
+df_cbs <- st_read("./data/raw_df_cbs.gpkg")
+```
+
+Some variables in the dataset are completely missing in some years. So we can use a streets' previous values to predict the value in the missing years using the exponential moving average. To do this for different years and variables, we write a function.
 
 ```{r}
 
@@ -379,7 +387,7 @@ impute_ema <- function(df, target_year, history_years, var) {
 }
 ```
 
-Impute data:
+Apply function.
 
 ```{r}
 #delete rows with zero residents
@@ -409,7 +417,7 @@ df_cbs <- df_cbs |>
 
 ```
 
-Calculate demographic diversity using Herfindahl index
+Calculating demographic diversity in the 500m x 500m squares using the Herfindahl index.
 
 ```{r}
 ##economic diversity
@@ -441,6 +449,8 @@ df_cbs |>
 ##age diversity
 
 #set number in age category to 0 if the total number of people is not missing
+#this number is set to missing if there are less than 4 people in the category
+#while we actually do have information on it
 df_cbs <- df_cbs |>
   mutate(
     aantal_inwoners_0_tot_15_jaar_500 = if_else(
@@ -480,6 +490,7 @@ df_cbs <- df_cbs |>
     percentage_inwoners_65_jaar_en_ouder_500 = aantal_inwoners_65_jaar_en_ouder_500 / aantal_inwoners_500,
   )
 
+#calculate diversity index
 df_cbs <- df_cbs |>
   mutate(
     age_diversity = 1 - (percentage_inwoners_0_tot_15_jaar_500^2 +
@@ -498,7 +509,7 @@ df_cbs |>
 
 ```
 
-Add historic solar panel costs from IRENA (<https://www.irena.org/Data/View-data-by-topic/Costs/Solar-costs>)
+Add historic solar panel costs from IRENA (<https://www.irena.org/Data/View-data-by-topic/Costs/Solar-costs>). This is expressed in USD per kWh and represents the "levelized cost of electricity" (lcoe), which are all the costs during the expected lifetime of the solar panel, divided by all the electricity produced during the same period.
 
 ```{r}
 df_cbs <- df_cbs |>
@@ -522,7 +533,7 @@ df_cbs <- df_cbs |>
 summary(df_cbs$solar_cost)
 ```
 
-Add electricity price data from CBS (<https://opendata.cbs.nl/#/CBS/nl/dataset/85666NED/table>)
+Add electricity price data from CBS (<https://opendata.cbs.nl/#/CBS/nl/dataset/85666NED/table>). The average electricity price is different for different usage quantities.
 
 ```{r}
 ## electricity use
@@ -603,6 +614,8 @@ summary(df_cbs$percentage_huurwoningen)
 df_cbs |> filter(is.na(percentage_koopwoningen) & is.na(percentage_huurwoningen)) |> summarise(count = n())
 
 #unnecessary missings
+#if we know either the percentage of rental homes or the percentage of owned homes
+#we can calculate the other percentage
 df_cbs <- df_cbs |>
   mutate(percentage_koopwoningen = if_else (
     is.na(percentage_koopwoningen) & !is.na(percentage_huurwoningen),
@@ -617,7 +630,7 @@ hist(df_cbs$percentage_geb_nederland_herkomst_nederland)
 ## age
 
 
-#estimating the average age
+#estimating the average age from the categories
 df_cbs <- df_cbs |>
   mutate(
     age_avg = (
@@ -636,7 +649,7 @@ hist(df_cbs$age_avg)
 
 ### Installed base
 
-Calculating the average energy feed-in in the same 500m x 500m square (weighted by number of households and exluding a streets' own energy feed-in)
+Calculating the average energy feed-in in the same 500m x 500m square (weighted by number of households), to represent the effect of social influence by nearby solar panels. I use the 500x500 square as neighbors because many of the moderators are most easily available at this level.
 
 ```{r}
 
@@ -645,17 +658,12 @@ avg_500 <- df_cbs |>
   st_drop_geometry() |>
   group_by(crs28992res500m, year) |>
   summarise(
-    w_sum_teruglevering_500 = sum((teruglevering * aantal_part_huishoudens), na.rm = TRUE),
-    n_hh_500 = sum(aantal_part_huishoudens),
-    .groups = "drop"
-  )
+    nb_pv = sum((teruglevering * aantal_part_huishoudens) / sum(aantal_part_huishoudens), na.rm = T),
+    .groups = "drop")
 
 #calculate
 df_cbs <- df_cbs |> 
-  left_join(avg_500, by = c("crs28992res500m", "year")) |>
-  mutate(nb_pv = 
-           (w_sum_teruglevering_500 - (teruglevering * aantal_part_huishoudens)) / (n_hh_500 - aantal_part_huishoudens)
-         )
+  left_join(avg_500, by = c("crs28992res500m", "year"))
 
 summary(df_cbs$teruglevering)
 summary(df_cbs$nb_pv)
@@ -667,11 +675,11 @@ summary(df_cbs$nb_pv)
 ```{r}
 #only select the colums I may use
 df_cbs <- df_cbs |>
-  select(-c(teruglevering, w_sum_teruglevering_500, n_hh_500, percentage_geb_nederland_herkomst_overig_europa, percentage_geb_nederland_herkomst_buiten_europa, percentage_geb_buiten_nederland_herkomst_europa, percentage_geb_buiten_nederland_herkmst_buiten_europa, percentage_niet_westerse_migr_achtergr, percentage_westerse_migr_achtergr, gemiddelde_huishoudensgrootte, aantal_mannen, aantal_vrouwen, aantal_inwoners_0_tot_15_jaar_500, aantal_inwoners_15_tot_25_jaar_500, aantal_inwoners_25_tot_45_jaar_500, aantal_inwoners_45_tot_65_jaar_500, aantal_inwoners_65_jaar_en_ouder_500, percentage_inwoners_0_tot_15_jaar_500, percentage_inwoners_15_tot_25_jaar_500, percentage_inwoners_25_tot_45_jaar_500, percentage_inwoners_45_tot_65_jaar_500, percentage_inwoners_65_jaar_en_ouder_500))
+  select(-c(teruglevering, percentage_geb_nederland_herkomst_overig_europa, percentage_geb_nederland_herkomst_buiten_europa, percentage_geb_buiten_nederland_herkomst_europa, percentage_geb_buiten_nederland_herkmst_buiten_europa, percentage_niet_westerse_migr_achtergr, percentage_westerse_migr_achtergr, gemiddelde_huishoudensgrootte, aantal_mannen, aantal_vrouwen, aantal_inwoners_0_tot_15_jaar_500, aantal_inwoners_15_tot_25_jaar_500, aantal_inwoners_25_tot_45_jaar_500, aantal_inwoners_45_tot_65_jaar_500, aantal_inwoners_65_jaar_en_ouder_500, percentage_inwoners_0_tot_15_jaar_500, percentage_inwoners_15_tot_25_jaar_500, percentage_inwoners_25_tot_45_jaar_500, percentage_inwoners_45_tot_65_jaar_500, percentage_inwoners_65_jaar_en_ouder_500))
   
 ```
 
-Match the predictor data to the solar panel data a year later, given the delay between the decision to adopt solar panels and the installation.
+Match the demographic predictor data to the solar panel data a year later, given the delay between the decision to adopt solar panels and the installation. Therefore the causal claim is stronger.
 
 ```{r}
 #join at t0 if t+1 is not available??
