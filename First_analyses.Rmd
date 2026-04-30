@@ -79,28 +79,13 @@ df |>
 Now we do the same using tmap. We see that some postal code areas are much larger than others. Furthermore, some areas are only available in some years.
 
 ```{r}
-tmap_mode("view")
+#interactive map was too large and would not push
 
-tm_shape(df |> filter (year == 2024)) +
-  tm_fill("teruglevering")
+tmap_mode("plot")
 
-tm_shape(df |> filter (year == 2023)) +
-  tm_fill("teruglevering")
-
-tm_shape(df |> filter (year == 2022)) +
-  tm_fill("teruglevering")
-
-tm_shape(df |> filter (year == 2019)) +
-  tm_fill("teruglevering")
-
-tm_shape(df |> filter (year == 2018)) +
-  tm_fill("teruglevering")
-
-tm_shape(df |> filter (year == 2017)) +
-  tm_fill("teruglevering")
-
-tm_shape(df |> filter (year == 2016)) +
-  tm_fill("teruglevering")
+tm_shape(df) +
+  tm_fill("teruglevering") +
+  tm_facets_wrap(by = "year")
 ```
 
 Calculate spatial autocorrelation over time, using "queen" contiguity to define the neighbors. There seems to be a decent amount of spatial autocorrelation, and it increases somewhat over time.
