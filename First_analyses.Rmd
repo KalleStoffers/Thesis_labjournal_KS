@@ -447,7 +447,7 @@ check_heteroscedasticity(model12)
 model12_rob_res <- coef_test(model12, vcov = "CR2", 
           cluster = model.frame(model12)$postcode_van)
 
-view(model12_rob_res)
+model12_rob_res
 
 
 ```
