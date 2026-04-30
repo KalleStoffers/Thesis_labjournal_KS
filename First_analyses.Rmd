@@ -20,6 +20,9 @@ library(spdep)
 library(lme4)
 library(lmerTest)
 library(performance)
+library(see)
+library(fixest)
+library(clubSandwich)
 
 
 df <- st_read("./data/df_analysis.gpkg")
@@ -27,7 +30,7 @@ df <- st_read("./data/df_analysis.gpkg")
 
 ## Plots
 
-Our dependent variable is the percentage of connections ("aansluitingen") in a street that have a net negative electricity usage. We see that most streets have a low degree of energy feed-in and that over time, this percentage has increased. (Data from 2021 and 2020 is missing because there was no CBS data from 2019 and 2020, but this should become available soon.)
+Our dependent variable is the percentage of electricity connections in a postal code area that have a yearly net negative electricity usage. We see that most areas have a low proportion of net producers and that over time, this percentage has increased. (Data from 2021 and 2020 is missing because there was no CBS data from 2019 and 2020, but this should become available soon.)
 
 ```{r}
 
@@ -44,32 +47,32 @@ df |>
   theme_minimal()
 ```
 
-Let's plot the degree of energy feed-in on a map. First, using ggplot:
+Let's plot the percentage of net producers on a map. First, using ggplot:
 
 ```{r}
 #on the street level
 df |>
-  filter(year == 2023) |>
+  filter(year == 2024) |>
   ggplot(
     aes(fill = teruglevering)
   ) +
   geom_sf(color = NA) +
-  scale_fill_viridis_c(option = "plasma", name = "Energy feed-in") +
+  scale_fill_viridis_c(option = "plasma", name = "% net producers") +
   theme_minimal()
 
-#on the 500m x 500m level:
+#neighborhood average:
 df |>
   filter(year == 2024) |>
   ggplot(
     aes(fill = nb_pv)
   ) +
   geom_sf(color = NA) +
-  scale_fill_viridis_c(option = "plasma", name = "Energy feed-in") +
+  scale_fill_viridis_c(option = "plasma", name = "% net producers") +
   theme_minimal()
 
 ```
 
-Using tmap. We see that some units ("streets" / postal code areas) are much larger than others. Furthermore, some units are only available in some years.
+Now we do the same using tmap. We see that some postal code areas are much larger than others. Furthermore, some areas are only available in some years.
 
 ```{r}
 tmap_mode("view")
@@ -161,7 +164,7 @@ str(moran_results_list)
 
 ```
 
-As a preliminary analysis, let's look at the relationship between the energy feed-in of the neighborhood at t-1 and a streets' energy feed-in at t0. It looks like there is an S-curve (sort of), in line with the literature on innovation adoption.
+As a preliminary analysis, let's look at the relationship between the percentage of net producers in the neighborhood at t-1 and the percentage of net producers at t0. It looks like there is an S-curve (sort of), in line with the literature on innovation adoption.
 
 ```{r}
 df |>
@@ -169,13 +172,13 @@ df |>
   geom_point(alpha = 0.2) +
   geom_smooth() +
   theme_minimal() +
-  xlab("Neighborhood energy feed-in at t-1") +
-  ylab("Energy feed-in at t=0")
+  xlab("Neighborhood net producers at t-1") +
+  ylab("Net producers at t=0")
 ```
 
 ## First models
 
-In RSiena I couldn't find any effect that tested the strength of influence of similar others compared to dissimilar others, so I for now I have opted for panel regression analysis where I interact the effect neighborhood pv-adoption (nb_pv) with neighborhood diversity, income, etc.
+In RSiena I couldn't find any effect that tested the strength of influence of similar others compared to dissimilar others, so I for now I have opted for panel regression analysis where I interact the effect neighborhood net producers (nb_pv) with neighborhood demographic diversity, income, etc.
 
 In the models with see that neighborhood pv-adoption has a positive effect on pv-adoption, following a logistic curve.
 
@@ -259,15 +262,122 @@ model7 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van)
                 + scale(ethnic_diversity)
                 + scale(age_diversity)
                 + scale(omgevingsadressendichtheid)
-                + scale(percentage_koopwoningen))
-               + time 
+                + scale(percentage_koopwoningen)
+                + time)
                + scale(nb_pv)
                + scale(nb_pv_log), REML = F, data = df)
 summary(model7)
 multicollinearity(model7)
+
+
+#time:nb_pv also too much multicollinearity so we leave it out
+model8 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+               + scale(nb_pv) * (
+                + scale(percentage_hoog_inkomen_huishouden)
+                + scale(percentage_laag_inkomen_huishouden)
+                + scale(gemiddelde_woz_waarde_woning)
+                + scale(electricity_price)
+                + scale(economic_diversity)
+                + scale(ethnic_diversity)
+                + scale(age_diversity)
+                + scale(omgevingsadressendichtheid)
+                + scale(percentage_koopwoningen))
+               + time
+               + scale(nb_pv)
+               + scale(nb_pv_log), REML = F, data = df)
+summary(model8)
+
+png("check_model8_output.png", width = 2000, height = 1600, res = 150)
+plot(performance::check_model(model8))
+dev.off()
+
+
+#adding non-linear interaction terms
+df <- df |>
+  mutate(gemiddelde_woz_waarde_woning_sq = gemiddelde_woz_waarde_woning^2,
+         electricity_price_sq = electricity_price^2)
+
+model9 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+               + scale(nb_pv) * (
+                + scale(percentage_hoog_inkomen_huishouden)
+                + scale(percentage_laag_inkomen_huishouden)
+                + scale(gemiddelde_woz_waarde_woning)
+                + scale(gemiddelde_woz_waarde_woning_sq)
+                + scale(electricity_price)
+                + scale(electricity_price_sq)
+                + scale(economic_diversity)
+                + scale(ethnic_diversity)
+                + scale(age_diversity)
+                + scale(omgevingsadressendichtheid)
+                + scale(percentage_koopwoningen))
+               + time
+               + scale(nb_pv)
+               + scale(nb_pv_log), REML = F, data = df)
+summary(model9)
+
+png("check_model9_output.png", width = 2000, height = 1600, res = 150)
+plot(performance::check_model(model9))
+dev.off()
+
+#too much multicollinearity for non-linear interaction terms, have to leave them #out
+multicollinearity(model9)
 ```
 
-Add control variables age and ethnicity. Interpretation of results, top to bottom:
+Add control variables, age and ethnicity
+
+```{r}
+model10 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+               + scale(nb_pv) * (
+                + scale(percentage_hoog_inkomen_huishouden)
+                + scale(percentage_laag_inkomen_huishouden)
+                + scale(gemiddelde_woz_waarde_woning)
+                + scale(electricity_price)
+                + scale(economic_diversity)
+                + scale(ethnic_diversity)
+                + scale(age_diversity)
+                + scale(omgevingsadressendichtheid)
+                + scale(percentage_koopwoningen))
+               + time 
+               + scale(nb_pv)
+               + scale(nb_pv_log)
+               + scale(age_avg)
+               + scale(percentage_geb_nederland_herkomst_nederland), 
+               REML = F, data = df)
+summary(model10)
+
+png("check_model10_output.png", width = 2000, height = 1600, res = 150)
+plot(performance::check_model(model10))
+dev.off()
+
+
+#let's try a model with only areas with home ownership >= 50%
+summary(df$percentage_koopwoningen)
+
+df_own <- df |> 
+  filter(percentage_koopwoningen >= 50)
+
+#won't converge, too small a sample size?
+model11 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+               + scale(nb_pv) * (
+                + scale(percentage_hoog_inkomen_huishouden)
+                + scale(percentage_laag_inkomen_huishouden)
+                + scale(gemiddelde_woz_waarde_woning)
+                + scale(electricity_price)
+                + scale(economic_diversity)
+                + scale(ethnic_diversity)
+                + scale(age_diversity)
+                + scale(omgevingsadressendichtheid)
+                + scale(percentage_koopwoningen))
+               + time 
+               + scale(nb_pv)
+               + scale(nb_pv_log)
+               + scale(age_avg)
+               + scale(percentage_geb_nederland_herkomst_nederland), 
+               REML = F, data = df_own)
+
+```
+
+Now using a model with REML = T. Interpretation of results, top to bottom:
 
 -   *Neighborhood PV-adoption has a positive effect on PV adoption (logistic function)*
 
@@ -302,7 +412,7 @@ Add control variables age and ethnicity. Interpretation of results, top to botto
 -   *The effect of neighborhood PV is stronger with more home ownership*
 
 ```{r}
-model8 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+model12 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
                + scale(nb_pv) * (
                 + scale(percentage_hoog_inkomen_huishouden)
                 + scale(percentage_laag_inkomen_huishouden)
@@ -318,23 +428,119 @@ model8 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van)
                + scale(nb_pv_log)
                + scale(age_avg)
                + scale(percentage_geb_nederland_herkomst_nederland), 
-               REML = F, data = df)
-summary(model8)
-multicollinearity(model8)
+               REML = T, data = df)
+summary(model12)
+
+png("check_model12_output.png", width = 2000, height = 1600, res = 150)
+plot(performance::check_model(model12))
+dev.off()
+
+#check more assumptions
+#autocorrelation and heteroscedasticity present
+check_collinearity(model12)
+check_autocorrelation(model12)
+check_heteroscedasticity(model12)
+
+#using cluster-robust SEs
+model12_rob_res <- coef_test(model12, vcov = "CR2", 
+          cluster = model.frame(model12)$postcode_van)
+
+view(model12_rob_res)
+
+
 ```
 
-## Future
+Baseline model without any interaction terms to see how much of the slope variance in nb_pv we explained
 
--   Neighborhood definition based on distance instead of 500m x 500m squares?
+```{r}
+model_bl <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+               + scale(nb_pv)
+                + scale(percentage_hoog_inkomen_huishouden)
+                + scale(percentage_laag_inkomen_huishouden)
+                + scale(gemiddelde_woz_waarde_woning)
+                + scale(electricity_price)
+                + scale(economic_diversity)
+                + scale(ethnic_diversity)
+                + scale(age_diversity)
+                + scale(omgevingsadressendichtheid)
+                + scale(percentage_koopwoningen)
+               + time 
+               + scale(nb_pv)
+               + scale(nb_pv_log)
+               + scale(age_avg)
+               + scale(percentage_geb_nederland_herkomst_nederland), 
+               REML = T, data = df)
+summary(model_bl)
 
-<!-- -->
+# variance in the random slope of scale(nb_pv) is actually lower than in the #interaction model???
 
+
+```
+
+Trying fixed effect model.
+
+```{r}
+library(fixest)
+
+model_fe <- feols(
+  scale(teruglevering) ~ 
+    scale(nb_pv) * (
+                + scale(percentage_hoog_inkomen_huishouden)
+                + scale(percentage_laag_inkomen_huishouden)
+                + scale(gemiddelde_woz_waarde_woning)
+                + scale(electricity_price)
+                + scale(economic_diversity)
+                + scale(ethnic_diversity)
+                + scale(age_diversity)
+                + scale(omgevingsadressendichtheid)
+                + scale(percentage_koopwoningen))
+     + time 
+     + scale(nb_pv)
+     + scale(nb_pv_log)
+     + scale(age_avg)
+     + scale(percentage_geb_nederland_herkomst_nederland) 
+  | postcode_van, 
+  data = df)
+  
+summary(model_fe)
+
+#autocorrelation and heteroscedasticity so we should use cluster robust SEs
+check_collinearity(model_fe)
+check_autocorrelation(model_fe)
+check_heteroscedasticity(model_fe)
+
+
+model_fe_rob <- feols(
+  scale(teruglevering) ~ 
+    scale(nb_pv) * (
+                + scale(percentage_hoog_inkomen_huishouden)
+                + scale(percentage_laag_inkomen_huishouden)
+                + scale(gemiddelde_woz_waarde_woning)
+                + scale(electricity_price)
+                + scale(economic_diversity)
+                + scale(ethnic_diversity)
+                + scale(age_diversity)
+                + scale(omgevingsadressendichtheid)
+                + scale(percentage_koopwoningen))
+     + time 
+     + scale(nb_pv)
+     + scale(nb_pv_log)
+     + scale(age_avg)
+     + scale(percentage_geb_nederland_herkomst_nederland) 
+  | postcode_van,
+  cluster = "postcode_van",
+  data = df)
+  
+summary(model_fe_rob)
+
+```
+
+## Questions and Future
+
+-   Non-linear interactions?
+-   How much variance in the slope of nb_pv do I explain?
+-   Decide on model, MGM vs FE?
+    -   I think MGM might be preferable, since some variables might not vary enough year by year.
 -   Impute missing data with spatial interpolation?
-
--   Non-linear interaction effects?
-
--   How to deal with home-ownership?
-
--   How much of the variance in nb_pv do I explain?
-
--   Rescaling method?
+-   Neighborhood definition based on distance instead of 500m x 500m squares?
+    -   

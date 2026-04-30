@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 ```
 
-```{r}
+```{r, eval=T}
 rm(list=ls())
 
 library(tidyverse)
@@ -20,7 +20,7 @@ library(TTR)
 
 ## Step 1: PV data
 
-To measure the amount of solar panels, we use open data from energy provider Westland Infra (<https://westlandinfra.nl/over-westland-infra/duurzaamheid-innovaties/open-data/>). As a dependent variable, we use the percentage of connections ("aansluitingen") in a street that have a net negative electricity usage, as this is indicative of the solar panel adoption in the street.
+The hypotheses will be tested using data from several sources. The first source of data comes from energy company Westland Infra, who have publicly available yearly data about energy usage for postal code areas of different sizes in the Dutch municipalities of Westland and Midden-Delfland (<https://westlandinfra.nl/over-westland-infra/duurzaamheid-innovaties/open-data/>). From this data we will use our dependent variable, which is the percentage of electricity connections in a postal code area that have a net negative electricity usage over the year. As one needs to produce electricity to end up with a net negative electricity usage, a higher percentage represents the presence of more solar panel installations. Research on the Dutch island of Texel shows that around 17% of households with solar panels are yearly net producers (Aydın et al., 2023).
 
 ```{r}
 pv <- readRDS("./data/pv_data.Rds") |>
@@ -43,7 +43,8 @@ pv <- pv |> mutate(teruglevering = 100 - leveringsrichting)
 
 ## Step 2: PC6 data
 
-We can connect these streets in the Westland region to demographic data at the postal code level from the CBS. These data can be downloaded here: <https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode>. After 1st of may the data of 2019 and 2020 should be available as well!
+Demographic characteristics are taken from data from Statistics
+Netherland for each (PC6) postal code (<https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/gegevens-per-postcode>). The data ranges from 2015 to 2024. After the 1st of May the data of 2019 and 2020 should be available as well!
 
 ```{r}
 #load data
@@ -73,6 +74,7 @@ cbs_pc6_16 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2016-v2/CBS_PC6_20
 cbs_pc6_15 <- st_read(dsn = "C:/Users/kalle/Downloads/CBS-PC6-2015-v2/CBS_PC6_2015_v2.shp") |>
   mutate (year = 2015)
 
+#the data from older years uses different column names so they have to be renamed #first
 cbs_pc6_1518 <- bind_rows(cbs_pc6_18, cbs_pc6_17, cbs_pc6_16, cbs_pc6_15) |>
   rename (
     postcode6 = Postcode,
@@ -114,7 +116,7 @@ rm(cbs_pc6_2124, cbs_pc6_1518)
 gc()
 ```
 
-Some streets in the PV data span across multiple PC6 postal codes. Therefore we first select all of the postal codes of the CBS data that are included in the PV data.
+The postal code areas in the data from Westland Infra can spa multiple PC6 postal codes. First we select all of the PC6 postal codes in the CBS data that are contained in the postal code ranges of the Westland Infra data.
 
 ```{r}
 cbs_pc6_westland <- cbs_pc6 |>
@@ -131,7 +133,7 @@ rm(cbs_pc6)
 gc()
 ```
 
-Now we have to transform the data from the single postal codes of the CBS to the areas containing one or more postal codes in the PV data.
+Next we aggregate this data from single postal codes of the PC6 data to the postal code areas of the Westland Infra data.
 
 ```{r}
 df_pc6 <- cbs_pc6_westland |>
@@ -200,7 +202,9 @@ gc()
 
 ## Step 3: 500m \* 500m data
 
-Some data, such as density and income is only available at the level of 500m by 500m squares. We also use these squares to calculate the demographic diversity of the surrounding neighborhood. These will also be the areas used to calculate the effect of neighborhood solar panels. The data can be downloaded here: [https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/kaart-van-500-meter-bij-500-meter-met-statistieken](#0){.uri}
+Some data, such as density and income, is only available at the level of 500m by 500m squares ([https://www.cbs.nl/nl-nl/dossier/nederland-regionaal/geografische-data/kaart-van-500-meter-bij-500-meter-met-statistieken](#0){.uri}).
+
+We also use these squares to calculate the demographic diversity of the surrounding neighborhood. These will also be the areas used to calculate the effect of neighborhood solar panels.
 
 ```{r}
 cbs_500_24 <- st_read(dsn = "C:/Users/kalle/Downloads/cbs_vk500_2024_v1.gpkg") |>
@@ -345,13 +349,13 @@ rm(cbs_500, df_pc6)
 
 ## Step 4: calculate relevant variables and impute missing years
 
-```{r}
+```{r, eval=T}
 df_cbs <- st_read("./data/raw_df_cbs.gpkg")
 ```
 
 Some variables in the dataset are completely missing in some years. So we can use a streets' previous values to predict the value in the missing years using the exponential moving average. To do this for different years and variables, we write a function.
 
-```{r}
+```{r, eval=T}
 
 df_cbs <- df_cbs |> arrange(postcode_van, year)
 
@@ -389,7 +393,7 @@ impute_ema <- function(df, target_year, history_years, var) {
 
 Apply function.
 
-```{r}
+```{r, eval=T}
 #delete rows with zero residents
 df_cbs <- df_cbs |> filter(aantal_inwoners != 0)
 
@@ -417,9 +421,9 @@ df_cbs <- df_cbs |>
 
 ```
 
-Calculating demographic diversity in the 500m x 500m squares using the Herfindahl index.
+Calculating demographic diversity in the 500m x 500m squares using the inverse Herfindahl index.
 
-```{r}
+```{r, eval=T}
 ##economic diversity
 df_cbs <- df_cbs |>
   mutate(
@@ -511,7 +515,7 @@ df_cbs |>
 
 Add historic solar panel costs from IRENA (<https://www.irena.org/Data/View-data-by-topic/Costs/Solar-costs>). This is expressed in USD per kWh and represents the "levelized cost of electricity" (lcoe), which are all the costs during the expected lifetime of the solar panel, divided by all the electricity produced during the same period.
 
-```{r}
+```{r, eval=T}
 df_cbs <- df_cbs |>
   mutate(solar_cost = case_when(
     year == 2015 ~ NA,
@@ -535,7 +539,7 @@ summary(df_cbs$solar_cost)
 
 Add electricity price data from CBS (<https://opendata.cbs.nl/#/CBS/nl/dataset/85666NED/table>). The average electricity price is different for different usage quantities.
 
-```{r}
+```{r, eval=T}
 ## electricity use
 summary(df_cbs$gemiddeld_elektriciteitsverbruik_woning)
 hist(df_cbs$gemiddeld_elektriciteitsverbruik_woning)
@@ -606,7 +610,7 @@ summary(df_cbs$electricity_cost)
 
 Look at control variables and their missing values
 
-```{r}
+```{r, eval=T}
 ## home ownership
 summary(df_cbs$percentage_koopwoningen)
 summary(df_cbs$percentage_huurwoningen)
@@ -651,7 +655,7 @@ hist(df_cbs$age_avg)
 
 Calculating the average energy feed-in in the same 500m x 500m square (weighted by number of households), to represent the effect of social influence by nearby solar panels. I use the 500x500 square as neighbors because many of the moderators are most easily available at this level.
 
-```{r}
+```{r, eval=T}
 
 #calculate the weighted sum of energy feed-in per 500m square per year.
 avg_500 <- df_cbs |>
@@ -682,8 +686,6 @@ df_cbs <- df_cbs |>
 Match the demographic predictor data to the solar panel data a year later, given the delay between the decision to adopt solar panels and the installation. Therefore the causal claim is stronger.
 
 ```{r}
-#join at t0 if t+1 is not available??
-
 df <- pv |>
   mutate(year_t_minus_one = year - 1) |>
   inner_join(
