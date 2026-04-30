@@ -2,7 +2,9 @@
 title: "First analyses"
 author: "Kalle Stoffers"
 date: "2026-04-06"
-output: html_document
+output:
+  html_document:
+    self_contained: false
 ---
 
 ```{r setup, include=FALSE}
