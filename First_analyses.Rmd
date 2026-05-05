@@ -56,7 +56,7 @@ Let's plot the percentage of net producers on a map. First, using ggplot:
 ```{r}
 #on the street level
 df |>
-  filter(year == 2024) |>
+  filter(year == 2023) |>
   ggplot(
     aes(fill = teruglevering)
   ) +
@@ -86,6 +86,13 @@ tmap_mode("plot")
 tm_shape(df) +
   tm_fill("teruglevering") +
   tm_facets_wrap(by = "year")
+
+
+tmap_mode("view")
+
+tm_shape(df |> filter(year == 2023)) +
+  tm_fill("teruglevering")
+
 ```
 
 Calculate spatial autocorrelation over time, using "queen" contiguity to define the neighbors. There seems to be a decent amount of spatial autocorrelation, and it increases somewhat over time.
@@ -175,26 +182,26 @@ In the models with see that neighborhood pv-adoption has a positive effect on pv
 df <- df|>
   mutate(time = year - 2016)
 
-#null-model, ICC = 34.7%. 
+#null-model, ICC = 36%. 
 #Most of the variation is within-streets over time, interesting!
-model0 <- lmer(teruglevering ~ (1 | postcode_van), REML = F, data = df)
+model0 <- lmer(teruglevering ~ (1 | area_id), REML = F, data = df)
 summary(model0)
-149.9 / (149.9 + 282.3)
+157.4 / (157.4 + 276.3)
 
 #model1 with random interept and fixed effect of time
-model1 <- lmer(teruglevering ~ (1 | postcode_van) + time, REML = F, data = df)
+model1 <- lmer(teruglevering ~ (1 | area_id) + time, REML = F, data = df)
 summary(model1)
 
 #model2 with random effect of time
-model2 <- lmer(teruglevering ~ (1 + time | postcode_van) + time, REML = F, data = df)
+model2 <- lmer(teruglevering ~ (1 + time | area_id) + time, REML = F, data = df)
 summary(model2)
 
 #model3 with random  intercept and random effect of time and fixed effect of time and nb_pv
-model3 <- lmer(teruglevering ~ (1 + time | postcode_van) + time + nb_pv, REML = F, data = df)
+model3 <- lmer(teruglevering ~ (1 + time | area_id) + time + nb_pv, REML = F, data = df)
 summary(model3)
 
 #model4 with random intercept and random effect of time and nb_pv
-model4 <- lmer(teruglevering ~ (1 + time + nb_pv | postcode_van) + time + nb_pv, REML = F, data = df)
+model4 <- lmer(teruglevering ~ (1 + time + nb_pv | area_id) + time + nb_pv, REML = F, data = df)
 summary(model4)
 
 #model5
@@ -204,12 +211,12 @@ df <- df |>
          )
 
 #with nb_pv squared
-model5_1 <- lmer(teruglevering ~ (1 + time + nb_pv | postcode_van) + time + nb_pv + nb_pv_sq, REML = F, data = df)
+model5_1 <- lmer(teruglevering ~ (1 + time + nb_pv | area_id) + time + nb_pv + nb_pv_sq, REML = F, data = df)
 summary(model5_1)
 
 #with logistic function of nb_pv ("S-curve")
 #higher significance and lower BIC so we stick with nb_pv_log
-model5_2 <- lmer(teruglevering ~ (1 + time + nb_pv | postcode_van) + time + nb_pv + nb_pv_log, REML = F, data = df)
+model5_2 <- lmer(teruglevering ~ (1 + time + nb_pv | area_id) + time + nb_pv + nb_pv_log, REML = F, data = df)
 summary(model5_2)
 
 ```
@@ -217,7 +224,7 @@ summary(model5_2)
 Because of the different scales, we standardize all variables. We add the CBS demographic information as interaction variables on the nb_pv variable.
 
 ```{r}
-model6 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+model6 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | area_id) 
                + scale(nb_pv) * (
                 + scale(percentage_hoog_inkomen_huishouden)
                 + scale(percentage_laag_inkomen_huishouden)
@@ -238,10 +245,11 @@ summary(model6)
 #check for multicollinearity
 multicollinearity(model6)
 
-#moderate correlations (VIF >5) for interaction terms with #percentage_laag_inkomen_huishouden, solar_cost, omgevingsadressendichtheid, #stedelijkheid. So we chose only one density measure (omgevingsadressendichtheid),
+#moderate correlations (VIF >5) for interaction terms with solar_cost, #omgevingsadressendichtheid, #stedelijkheid. So we chose only one density measure 
+#(omgevingsadressendichtheid),
 #and remove solar_cost, this probably correlates too much with time. 
 
-model7 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+model7 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | area_id) 
                + scale(nb_pv) * (
                 + scale(percentage_hoog_inkomen_huishouden)
                 + scale(percentage_laag_inkomen_huishouden)
@@ -260,7 +268,7 @@ multicollinearity(model7)
 
 
 #time:nb_pv also too much multicollinearity so we leave it out
-model8 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+model8 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | area_id) 
                + scale(nb_pv) * (
                 + scale(percentage_hoog_inkomen_huishouden)
                 + scale(percentage_laag_inkomen_huishouden)
@@ -286,7 +294,7 @@ df <- df |>
   mutate(gemiddelde_woz_waarde_woning_sq = gemiddelde_woz_waarde_woning^2,
          electricity_price_sq = electricity_price^2)
 
-model9 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+model9 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | area_id) 
                + scale(nb_pv) * (
                 + scale(percentage_hoog_inkomen_huishouden)
                 + scale(percentage_laag_inkomen_huishouden)
@@ -315,7 +323,7 @@ multicollinearity(model9)
 Add control variables, age and ethnicity
 
 ```{r}
-model10 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+model10 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | area_id) 
                + scale(nb_pv) * (
                 + scale(percentage_hoog_inkomen_huishouden)
                 + scale(percentage_laag_inkomen_huishouden)
@@ -346,7 +354,7 @@ df_own <- df |>
   filter(percentage_koopwoningen >= 50)
 
 #won't converge, too small a sample size?
-model11 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+model11 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | area_id) 
                + scale(nb_pv) * (
                 + scale(percentage_hoog_inkomen_huishouden)
                 + scale(percentage_laag_inkomen_huishouden)
@@ -366,42 +374,56 @@ model11 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van)
 
 ```
 
-Now using a model with REML = T. Interpretation of results, top to bottom:
+Now using a final model with REML = T. Interpretation of results, top to bottom:
 
--   *Neighborhood PV-adoption has a positive effect on PV adoption (logistic function)*
+-   Neighborhood net producers increases an area's net producers.
 
--   More high income households, more PV
+    -   Strongest predictor!
 
--   Higher average property value, more PV
+    -   In a logistic ("S-curve") fashion, in line with H1.
 
--   Higher electricity price, more PV
+-   More high income households, more net producers
 
--   More home ownership, more PV
+-   Higher property value, more net producers
 
--   PV-adoption has increased over time
+-   Higher electricity price, more net producers
 
--   Higher average age, less PV
+-   More home ownership, more net producers
 
--   *The effect of neighborhood PV is weaker with more high income households*
+-   More net producers over time
 
--   *No difference in the effect of neighborhood PV based on percentage of low income households*
+-   Older average age, less net producers
 
--   *The effect of neighborhood PV is weaker with a higher average property value*
+-   More Dutch origin residents, more net producers
 
--   *No difference in the effect of neighborhood PV based on electricity price*
+-   The effect of neighborhood net producers is not (linearly) influenced by income or property value
 
--   *No difference in the effect of neighborhood PV based on economic diversity*
+    -   In H2 we expected a non-linear effect
 
--   *The effect of neighborhood PV is weaker with a higher ethnic diversity*
+-   Higher electricity price, more influence from neighborhood.
 
--   *The effect of neighborhood PV is weaker with a higher age diversity*
+    -   Creates a beneficial pre-conditions to be influenced
 
--   *No difference in the effect of neighborhood PV based on density*
+-   Economic diversity does not slow down the neighborhood influence.
 
--   *The effect of neighborhood PV is stronger with more home ownership*
+    -   In contrast to H3
+
+-   More ethnic diversity, less neighborhood influence.
+
+    -   In line with H3
+
+-   Age diversity does not influence the neighborhood effect.
+
+    -   In contrast to H3
+
+-   Density does not influence the strength of the effect of neighborhood net producers.
+
+    -   In contrast to H4
+
+-   More home ownership, more neighborhood influence
 
 ```{r}
-model12 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+model12 <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | area_id) 
                + scale(nb_pv) * (
                 + scale(percentage_hoog_inkomen_huishouden)
                 + scale(percentage_laag_inkomen_huishouden)
@@ -432,9 +454,9 @@ check_heteroscedasticity(model12)
 
 #using cluster-robust SEs
 model12_rob_res <- coef_test(model12, vcov = "CR2", 
-          cluster = model.frame(model12)$postcode_van)
+          cluster = model.frame(model12)$area_id)
 
-model12_rob_res
+view(model12_rob_res)
 
 
 ```
@@ -442,7 +464,7 @@ model12_rob_res
 Baseline model without any interaction terms to see how much of the slope variance in nb_pv we explained
 
 ```{r}
-model_bl <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | postcode_van) 
+model_bl <- lmer(scale(teruglevering) ~ (1 + time + scale(nb_pv) | area_id) 
                + scale(nb_pv)
                 + scale(percentage_hoog_inkomen_huishouden)
                 + scale(percentage_laag_inkomen_huishouden)
@@ -468,9 +490,65 @@ summary(model_bl)
 
 Trying fixed effect model.
 
-```{r}
-library(fixest)
+Interpretation of results:
 
+-   Neighborhood net producers increases an area's net producers.
+
+    -   Strongest predictor!
+
+    -   In a logistic ("S-curve") fashion, in line with H1.
+
+-   More high income households, more net producers
+
+-   Higher electricity price, more net producers
+
+-   Higher property value, more net producers
+
+-   More home ownership, NOT more net producers
+
+    -   In contrast with MGM, maybe low "within" variance in home ownership
+
+-   More net producers over time
+
+-   Older average age, NOT less net producers
+
+    -   In contrast with MGM, maybe low "within" variance
+
+-   More Dutch origin residents, NOT more net producers
+
+    -   In contrast with MGM, maybe low "within" variance
+
+-   The effect of neighborhood net producers is not (linearly) influenced by income
+
+    -   In H2 we expected a non-linear effect
+
+-   The effect of neighborhood net producers is larger with higher property value
+
+    -   In contrast to MGM
+
+-   Higher electricity price NOT more influence from neighborhood.
+
+    -   In contrast to MGM
+
+-   Economic diversity does not slow down the neighborhood influence.
+
+    -   In contrast to H3
+
+-   More ethnic diversity, less neighborhood influence.
+
+    -   In line with H3
+
+-   Age diversity does influence the neighborhood effect.
+
+    -   In contrast to MGM, in line with H3
+
+-   Density decreases the strength of the effect of neighborhood net producers.
+
+    -   In contrast to MGM, in line with H4
+
+-   More home ownership, more neighborhood influence
+
+```{r}
 model_fe <- feols(
   scale(teruglevering) ~ 
     scale(nb_pv) * (
@@ -488,7 +566,7 @@ model_fe <- feols(
      + scale(nb_pv_log)
      + scale(age_avg)
      + scale(percentage_geb_nederland_herkomst_nederland) 
-  | postcode_van, 
+  | area_id, 
   data = df)
   
 summary(model_fe)
@@ -516,20 +594,22 @@ model_fe_rob <- feols(
      + scale(nb_pv_log)
      + scale(age_avg)
      + scale(percentage_geb_nederland_herkomst_nederland) 
-  | postcode_van,
-  cluster = "postcode_van",
+  | area_id,
+  cluster = "area_id",
   data = df)
   
-summary(model_fe_rob)
+results_df <- as.data.frame(summary(model_fe_rob)$coeftable)
+View(results_df)
 
 ```
 
-## Questions and Future
+## Bespreken
 
+-   Spatial interpolation/imputation levert weinig op; itereren? of op 500x500 niveau imputeren?
 -   Non-linear interactions?
 -   How much variance in the slope of nb_pv do I explain?
 -   Decide on model, MGM vs FE?
     -   I think MGM might be preferable, since some variables might not vary enough year by year.
--   Impute missing data with spatial interpolation?
 -   Neighborhood definition based on distance instead of 500m x 500m squares?
-    -   
+    -   Would probably take too long and Moran's I based on distance is smaller
+-   Definitieve scriptie deadline

@@ -31,7 +31,8 @@ pv <- readRDS("./data/pv_data.Rds") |>
          postcode_tot = POSTCODE_TOT,
          straatnaam = STRAATNAAM,
          leveringsrichting = X.Leveringsrichting) |>
-  select(id, postcode_van, postcode_tot, straatnaam, year, leveringsrichting)
+  mutate(area_id = as.integer(factor(paste(postcode_van, postcode_tot, sep = "_")))) |>
+  select(id, area_id, postcode_van, postcode_tot, straatnaam, year, leveringsrichting)
 
 class(pv$leveringsrichting)
 pv$leveringsrichting <- as.numeric(gsub(",", ".", pv$leveringsrichting))
@@ -116,7 +117,7 @@ rm(cbs_pc6_2124, cbs_pc6_1518)
 gc()
 ```
 
-The postal code areas in the data from Westland Infra can spa multiple PC6 postal codes. First we select all of the PC6 postal codes in the CBS data that are contained in the postal code ranges of the Westland Infra data.
+The postal code areas in the data from Westland Infra can span multiple PC6 postal codes. First we select all of the PC6 postal codes in the CBS data that are contained in the postal code ranges of the Westland Infra data.
 
 ```{r}
 cbs_pc6_westland <- cbs_pc6 |>
@@ -144,6 +145,7 @@ df_pc6 <- cbs_pc6_westland |>
     
     across(
       c(
+        area_id,
         postcode_van, 
         postcode_tot, 
         straatnaam, 
@@ -350,6 +352,8 @@ rm(cbs_500, df_pc6)
 ## Step 4: calculate relevant variables and impute missing years
 
 ```{r, eval=T}
+rm(list=ls())
+
 df_cbs <- st_read("./data/raw_df_cbs.gpkg")
 ```
 
@@ -357,16 +361,16 @@ Some variables in the dataset are completely missing in some years. So we can us
 
 ```{r, eval=T}
 
-df_cbs <- df_cbs |> arrange(postcode_van, year)
+df_cbs <- df_cbs |> arrange(area_id, year)
 
 impute_ema <- function(df, target_year, history_years, var) {
   imputed <- df |>
     filter(is.na({{ var }}) & year == target_year) |>
-    pull(postcode_van) |>
+    pull(area_id) |>
     unique() |>
     sapply(function(pc) {
       hist_values <- df |>
-        filter(postcode_van == pc, year %in% history_years) |>
+        filter(area_id == pc, year %in% history_years) |>
         arrange(year) |>
         pull({{ var }}) |>
         na.omit()
@@ -379,10 +383,10 @@ impute_ema <- function(df, target_year, history_years, var) {
         tail(EMA(hist_values, 2), 1)
       }
     }) |>
-    enframe(name = "postcode_van", value = "imputed_value")
+    enframe(name = "area_id", value = "imputed_value")
   
   df |>
-    left_join(imputed, by = "postcode_van") |>
+    left_join(imputed, by = "area_id") |>
     mutate({{ var }} := case_when(
       is.na({{ var }}) & year == target_year ~ imputed_value,
       .default = {{ var }}
@@ -421,10 +425,50 @@ df_cbs <- df_cbs |>
 
 ```
 
+There are still many other missing values, so we impute (some) missing values using spatial interpolation, by taking the mean of neighboring postal code areas.
+
+```{r}
+
+df_cbs <- df_cbs |> arrange(area_id, year)
+areas <- df_cbs |> distinct(area_id, .keep_all = TRUE)
+nb <- poly2nb(areas, queen = TRUE)
+
+  years <- c(2016:2019, 2022:2024)
+  area_ids  <- areas$area_id
+  
+spatial_impute <- function(df, var) {
+  print(summary(df[[var]]))
+  
+  for (yr in years) {
+    yr_data <- df[df$year == yr, ] |> arrange(area_id)
+    vals    <- yr_data[[var]]
+    missing <- which(is.na(vals))
+    
+    for (i in missing) {
+      nbrs     <- nb[[i]]
+      nbr_vals <- vals[nbrs]
+      nbr_vals <- nbr_vals[!is.na(nbr_vals)]
+      
+      if (length(nbr_vals) > 0) {
+        df[df$year == yr & df$area_id == area_ids[i], var] <- mean(nbr_vals)
+      }
+    }
+  }
+  
+  print(summary(df[[var]]))
+  return(df)
+}
+```
+
 Calculating demographic diversity in the 500m x 500m squares using the inverse Herfindahl index.
 
 ```{r, eval=T}
 ##economic diversity
+
+#first impute missing values for income.
+df_cbs <- spatial_impute(df_cbs, "percentage_hoog_inkomen_huishouden")
+df_cbs <- spatial_impute(df_cbs, "percentage_laag_inkomen_huishouden")
+
 df_cbs <- df_cbs |>
   mutate(
     economic_diversity = 1 - ((percentage_hoog_inkomen_huishouden^2 +
@@ -438,6 +482,9 @@ df_cbs <- df_cbs |>
 summary(df_cbs$economic_diversity)
 
 ##ethnic diversity 
+
+#first impute missing values for ethnicity.
+df_cbs <- spatial_impute(df_cbs, "percentage_geb_nederland_herkomst_nederland_500")
 
 df_cbs <- df_cbs |>
   mutate(
@@ -494,6 +541,13 @@ df_cbs <- df_cbs |>
     percentage_inwoners_65_jaar_en_ouder_500 = aantal_inwoners_65_jaar_en_ouder_500 / aantal_inwoners_500,
   )
 
+#impute missings
+df_cbs <- spatial_impute(df_cbs, "percentage_inwoners_0_tot_15_jaar_500")
+df_cbs <- spatial_impute(df_cbs, "percentage_inwoners_15_tot_25_jaar_500")
+df_cbs <- spatial_impute(df_cbs, "percentage_inwoners_25_tot_45_jaar_500")
+df_cbs <- spatial_impute(df_cbs, "percentage_inwoners_45_tot_65_jaar_500")
+df_cbs <- spatial_impute(df_cbs, "percentage_inwoners_65_jaar_en_ouder_500")
+
 #calculate diversity index
 df_cbs <- df_cbs |>
   mutate(
@@ -506,6 +560,8 @@ df_cbs <- df_cbs |>
 
 
 summary(df_cbs$age_diversity)
+
+
 
 df_cbs |> 
   group_by(year) |> 
@@ -542,6 +598,9 @@ Add electricity price data from CBS (<https://opendata.cbs.nl/#/CBS/nl/dataset/8
 ```{r, eval=T}
 ## electricity use
 summary(df_cbs$gemiddeld_elektriciteitsverbruik_woning)
+
+df_cbs <- spatial_impute(df_cbs, "gemiddeld_elektriciteitsverbruik_woning")
+
 hist(df_cbs$gemiddeld_elektriciteitsverbruik_woning)
 
 ## add electricity price (CBS)
@@ -627,12 +686,16 @@ df_cbs <- df_cbs |>
     percentage_koopwoningen
   ))
 
+df_cbs <- spatial_impute(df_cbs, "percentage_koopwoningen")
+
 ## ethnicity
 summary(df_cbs$percentage_geb_nederland_herkomst_nederland)
+
+df_cbs <- spatial_impute(df_cbs, "percentage_geb_nederland_herkomst_nederland")
+
 hist(df_cbs$percentage_geb_nederland_herkomst_nederland)
 
 ## age
-
 
 #estimating the average age from the categories
 df_cbs <- df_cbs |>
@@ -690,14 +753,30 @@ df <- pv |>
   mutate(year_t_minus_one = year - 1) |>
   inner_join(
     df_cbs,
-    by = join_by(postcode_van == postcode_van,
+    by = join_by(area_id == area_id,
                  year_t_minus_one == year)
   ) |>
   rename(id = id.x,
+         postcode_van = postcode_van.x,
          postcode_tot = postcode_tot.x,
          straatnaam = straatnaam.x) |>
   select( -c(id.y, postcode_tot.y, straatnaam.y, year_t_minus_one)) |>
-  relocate(id, postcode_van, postcode_tot, straatnaam, year, teruglevering, nb_pv, percentage_hoog_inkomen_huishouden, percentage_laag_inkomen_huishouden, gemiddelde_woz_waarde_woning, solar_cost, gemiddeld_elektriciteitsverbruik_woning, electricity_price, electricity_cost, economic_diversity, ethnic_diversity, age_diversity, omgevingsadressendichtheid, stedelijkheid, percentage_geb_nederland_herkomst_nederland, age_avg, percentage_koopwoningen, percentage_huurwoningen)
+  relocate(id, postcode_van, postcode_tot, straatnaam, area_id, year, teruglevering, nb_pv, percentage_hoog_inkomen_huishouden, percentage_laag_inkomen_huishouden, gemiddelde_woz_waarde_woning, solar_cost, gemiddeld_elektriciteitsverbruik_woning, electricity_price, electricity_cost, economic_diversity, ethnic_diversity, age_diversity, omgevingsadressendichtheid, stedelijkheid, percentage_geb_nederland_herkomst_nederland, age_avg, percentage_koopwoningen, percentage_huurwoningen)
+```
+
+Check
+
+```{r}
+df |>
+  filter(year == 2024) |>
+  select(area_id, crs28992res500m, nb_pv, year) |>
+  left_join(
+    avg_500 |> filter(year == 2023) |> rename(nb_pv_2023 = nb_pv),
+    by = "crs28992res500m"
+  ) |>
+  mutate(match = near(nb_pv, nb_pv_2023)) |>
+  count(match)
+
 ```
 
 Save data!
